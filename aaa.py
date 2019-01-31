@@ -3,7 +3,7 @@
 For more information, see the paper
 
   The AAA Algorithm for Rational Approximation
-  Yuji Nakatsukasa, Olivier Sète, and Lloyd N. Trefethen
+  Yuji Nakatsukasa, Olivier Sete, and Lloyd N. Trefethen
   SIAM Journal on Scientific Computing 2018 40:3, A1494-A1522
 
 as well as the Chebfun package <http://www.chebfun.org>. This code is an almost
