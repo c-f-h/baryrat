@@ -4,9 +4,12 @@ This is a Python implementation of the AAA algorithm for rational approximation
 described in the paper "The AAA Algorithm for Rational Approximation" by Yuji
 Nakatsukasa, Olivier Sète, and Lloyd N. Trefethen, SIAM Journal on Scientific
 Computing 2018 40:3, A1494-A1522.
+[(doi)](https://doi.org/10.1137/16M1106122)
 
 A MATLAB implementation of this algorithm is contained in [Chebfun](http://www.chebfun.org/).
 The present Python version is a more or less direct port of the MATLAB version.
+
+The "cleanup" feature for spurious poles and zeros is not currently implemented.
 
 ## Installation
 

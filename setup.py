@@ -11,7 +11,7 @@ def readme():
 
 setup(
     name = 'aaa-approx',
-    version = '1.0.1',
+    version = '1.0.2',
     description = 'A Python implementation of the AAA algorithm for rational approximation',
     long_description = readme(),
     long_description_content_type = 'text/markdown',
