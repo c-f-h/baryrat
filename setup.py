@@ -1,5 +1,6 @@
 from setuptools import setup
 import os
+from io import open # Py2.7 compatibility
 
 def readme():
     with open(os.path.join(
