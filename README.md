@@ -1,4 +1,4 @@
-# The AAA algorithm for rational approximation
+# The AAA algorithm for rational approximation [![Build Status](https://travis-ci.com/c-f-h/aaa.svg?branch=master)](https://travis-ci.com/c-f-h/aaa)
 
 This is a Python implementation of the AAA algorithm for rational approximation
 described in the paper "The AAA Algorithm for Rational Approximation" by Yuji
