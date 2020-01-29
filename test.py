@@ -45,3 +45,12 @@ def test_zeros():
     assert np.allclose(zer,
             np.array([-0.38621461,  1.43052691,  0.49999907,  1.,  0.]))
     assert np.allclose(r(zer), 0.0)
+
+def test_interpolate():
+    Z = np.arange(1, 5)
+    F = np.sin(Z)
+    poles = [-1, -2, -3]
+    r = aaa.interpolate_with_poles(F, Z, poles)
+    assert np.allclose(r(Z), F)
+    pol, res = r.polres()
+    assert np.allclose(sorted(pol), sorted(poles))

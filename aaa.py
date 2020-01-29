@@ -145,3 +145,20 @@ def aaa(F, Z, tol=1e-13, mmax=100, return_errors=False):
 
     r = BarycentricRational(zj, fj, wj)
     return (r, errors) if return_errors else r
+
+def interpolate_with_poles(values, nodes, poles):
+    """Compute a rational function which interpolates the given values at the
+    given nodes and which has the given poles.
+    """
+    n = len(nodes)
+    if n != len(values) or n != len(poles) + 1:
+        raise ValueError('invalid length of arrays')
+    nodes = np.asanyarray(nodes)
+    values = np.asanyarray(values)
+    poles = np.asanyarray(poles)
+    # compute Cauchy matrix
+    C = 1.0 / (poles[:,None] - nodes[None,:])
+    # compute null space
+    _, _, Vh = np.linalg.svd(C)
+    weights = Vh[-1, :]
+    return BarycentricRational(nodes, values, weights)
