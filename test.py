@@ -19,6 +19,18 @@ def test_approx():
     assert r(np.ones(7)).shape == (7,)
     assert r(np.ones((3,2))).shape == (3,2)
 
+def test_reproduction():
+    p = [-1.0, -2.0, -3.0]
+    def f(z):
+        return (z**3 - 2*z**2 + 4*z - 7) / ((z - p[0])*(z - p[1])*(z - p[2]))
+    nodes = np.arange(1, 8, dtype=float)
+    r = aaa.aaa(f(nodes), nodes)
+    assert np.allclose(f(nodes), r(nodes))
+    z = np.linspace(0, 1, 100)
+    assert np.allclose(f(z), r(z))
+    pol, res = r.polres()
+    assert np.allclose(sorted(p), sorted(pol))
+
 def test_polres():
     Z = np.linspace(0.0, 1.0, 101)
     F = np.exp(Z) * np.sin(2*np.pi*Z)
