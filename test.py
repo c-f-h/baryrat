@@ -59,6 +59,14 @@ def test_zeros():
             np.array([-0.38621461,  1.43052691,  0.49999907,  1.,  0.]))
     assert np.allclose(r(zer), 0.0)
 
+def test_interpolate_poly():
+    Z = np.linspace(1, 5, 7)
+    F = np.sin(Z)
+    p = aaa.interpolate_poly(F, Z)
+    p1 = scipy.interpolate.lagrange(Z, F)
+    X = np.linspace(1, 5, 100)
+    assert np.allclose(p(X), p1(X))
+
 def test_interpolate_with_poles():
     Z = np.arange(1, 5)
     F = np.sin(Z)

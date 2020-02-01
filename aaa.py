@@ -146,6 +146,20 @@ def aaa(F, Z, tol=1e-13, mmax=100, return_errors=False):
     r = BarycentricRational(zj, fj, wj)
     return (r, errors) if return_errors else r
 
+def interpolate_poly(values, nodes):
+    """Compute the interpolating polynomial for the given nodes and values in
+    barycentric form.
+    """
+    n = len(nodes)
+    if n != len(values):
+        raise ValueError('input arrays should have the same length')
+    x = nodes
+    weights = np.array([
+            1.0 / np.prod([x[i] - x[j] for j in range(n) if j != i])
+            for i in range(n)
+    ])
+    return BarycentricRational(nodes, values, weights)
+
 def interpolate_with_poles(values, nodes, poles):
     """Compute a rational function which interpolates the given values at the
     given nodes and which has the given poles.
