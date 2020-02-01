@@ -162,3 +162,34 @@ def interpolate_with_poles(values, nodes, poles):
     _, _, Vh = np.linalg.svd(C)
     weights = Vh[-1, :]
     return BarycentricRational(nodes, values, weights)
+
+def floater_hormann(values, nodes, blending):
+    """Compute the Floater-Hormann rational interpolant for the given nodes and
+    values. See (Floater, Hormann 2007), DOI 10.1007/s00211-007-0093-y.
+
+    The blending parameter (usually called `d` in the literature) is an integer
+    between 0 and n (inclusive), where n+1 is the number of interpolation
+    nodes. For functions with higher smoothness, the blending parameter may be
+    chosen higher. For d=n, the result is the polynomial interpolant.
+
+    Returns an instance of `BarycentricRational`.
+    """
+    n = len(values) - 1
+    if n != len(nodes) - 1:
+        raise ValueError('input arrays should have the same length')
+    if not (0 <= blending <= n):
+        raise ValueError('blending parameter should be between 0 and n')
+
+    weights = np.zeros(n + 1)
+    # abbreviations to match the formulas in the literature
+    d = blending
+    x = nodes
+    for i in range(n + 1):
+        Ji = range(max(0, i-d), min(i, n-d) + 1)
+        weight = 0.0
+        for k in Ji:
+            weight += np.prod([1.0 / abs(x[i] - x[j])
+                    for j in range(k, k+d+1)
+                    if j != i])
+        weights[i] = (-1.0)**(i-d) * weight
+    return BarycentricRational(nodes, values, weights)

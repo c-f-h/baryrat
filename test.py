@@ -1,5 +1,6 @@
 import numpy as np
 import aaa
+import scipy.interpolate
 
 def test_approx():
     Z = np.linspace(0.0, 1.0, 101)
@@ -58,7 +59,7 @@ def test_zeros():
             np.array([-0.38621461,  1.43052691,  0.49999907,  1.,  0.]))
     assert np.allclose(r(zer), 0.0)
 
-def test_interpolate():
+def test_interpolate_with_poles():
     Z = np.arange(1, 5)
     F = np.sin(Z)
     poles = [-1, -2, -3]
@@ -66,3 +67,29 @@ def test_interpolate():
     assert np.allclose(r(Z), F)
     pol, res = r.polres()
     assert np.allclose(sorted(pol), sorted(poles))
+
+def test_interpolate_floater_hormann():
+    n = 10
+    Z = np.linspace(-5, 5, n + 1)
+    X = np.linspace(-5, 5, 200)
+    def f(z): return 1.0 / (1 + z**2)  # Runge's example
+    F = f(Z)
+    # normalized weights for the equidistant case given in FH2007
+    correct_abs_weights = [
+        [1, 1, 1, 1],
+        [1, 2, 2, 2],
+        [1, 3, 4, 4],
+        [1, 4, 7, 8]
+    ]
+    for d in range(4):
+        r = aaa.floater_hormann(F, Z, d)
+        assert np.allclose(r(Z), F)
+        w = abs(r.weights / r.weights[0]) # normalize
+        assert np.allclose(w[:4], correct_abs_weights[d])
+        if d == 3:
+            err = np.linalg.norm(r(X) - f(X), np.inf)
+            assert err < 6.9e-2   # published error in FH2007
+    # check that d=n results in polynomial interpolant
+    r = aaa.floater_hormann(F, Z, n)
+    p = scipy.interpolate.lagrange(Z, F)
+    assert np.allclose(r(X), p(X))
