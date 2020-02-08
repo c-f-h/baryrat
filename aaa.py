@@ -38,13 +38,11 @@ class BarycentricRational:
         # for z in zj, the above produces NaN; we check for this
         nans = np.nonzero(np.isnan(r))[0]
         for i in nans:
-            # find closest support node from zj
-            dist = abs(xv[i] - zj)
-            j = np.argmin(dist)
-            # if very close, replace r[i] with the value of fj at zj;
-            # otherwise, it could be a legitimate NaN
-            if dist[j] < 1e-12:
-                r[i] = fj[j]
+            # is xv[i] one of our nodes?
+            nodeidx = np.nonzero(xv[i] == zj)[0]
+            if len(nodeidx) > 0:
+                # then replace the NaN with the value at that node
+                r[i] = fj[nodeidx[0]]
 
         if np.isscalar(x):
             return r[0]
