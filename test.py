@@ -62,7 +62,7 @@ def test_zeros():
 def test_interpolate_rat():
     Z = np.linspace(1, 5, 7)
     F = np.sin(Z)
-    p = baryrat.interpolate_rat(F, Z)
+    p = baryrat.interpolate_rat(Z, F)
     assert np.allclose(p(Z), F)
     X = np.linspace(1, 5, 100)
     err = np.linalg.norm(p(X) - np.sin(X), np.inf)
@@ -71,7 +71,7 @@ def test_interpolate_rat():
 def test_interpolate_poly():
     Z = np.linspace(1, 5, 7)
     F = np.sin(Z)
-    p = baryrat.interpolate_poly(F, Z)
+    p = baryrat.interpolate_poly(Z, F)
     p1 = scipy.interpolate.lagrange(Z, F)
     X = np.linspace(1, 5, 100)
     assert np.allclose(p(X), p1(X))
@@ -80,7 +80,7 @@ def test_interpolate_with_poles():
     Z = np.arange(1, 5)
     F = np.sin(Z)
     poles = [-1, -2, -3]
-    r = baryrat.interpolate_with_poles(F, Z, poles)
+    r = baryrat.interpolate_with_poles(Z, F, poles)
     assert np.allclose(r(Z), F)
     pol, res = r.polres()
     assert np.allclose(sorted(pol), sorted(poles))
@@ -99,7 +99,7 @@ def test_interpolate_floater_hormann():
         [1, 4, 7, 8]
     ]
     for d in range(4):
-        r = baryrat.floater_hormann(F, Z, d)
+        r = baryrat.floater_hormann(Z, F, d)
         assert np.allclose(r(Z), F)
         w = abs(r.weights / r.weights[0]) # normalize
         assert np.allclose(w[:4], correct_abs_weights[d])
@@ -107,6 +107,6 @@ def test_interpolate_floater_hormann():
             err = np.linalg.norm(r(X) - f(X), np.inf)
             assert err < 6.9e-2   # published error in FH2007
     # check that d=n results in polynomial interpolant
-    r = baryrat.floater_hormann(F, Z, n)
+    r = baryrat.floater_hormann(Z, F, n)
     p = scipy.interpolate.lagrange(Z, F)
     assert np.allclose(r(X), p(X))

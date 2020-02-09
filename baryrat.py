@@ -145,7 +145,7 @@ def aaa(Z, F, tol=1e-13, mmax=100, return_errors=False):
     r = BarycentricRational(zj, fj, wj)
     return (r, errors) if return_errors else r
 
-def interpolate_rat(values, nodes):
+def interpolate_rat(nodes, values):
     """Compute a rational function which passes through all given node/value
     pairs. The number of nodes must be odd, and they should be passed in
     strictly increasing or strictly decreasing order.
@@ -164,7 +164,7 @@ def interpolate_rat(values, nodes):
     assert len(weights) == n
     return BarycentricRational(xa, va, weights)
 
-def interpolate_poly(values, nodes):
+def interpolate_poly(nodes, values):
     """Compute the interpolating polynomial for the given nodes and values in
     barycentric form.
     """
@@ -178,7 +178,7 @@ def interpolate_poly(values, nodes):
     ])
     return BarycentricRational(nodes, values, weights)
 
-def interpolate_with_poles(values, nodes, poles):
+def interpolate_with_poles(nodes, values, poles):
     """Compute a rational function which interpolates the given values at the
     given nodes and which has the given poles.
     """
@@ -195,7 +195,7 @@ def interpolate_with_poles(values, nodes, poles):
     weights = Vh[-1, :]
     return BarycentricRational(nodes, values, weights)
 
-def floater_hormann(values, nodes, blending):
+def floater_hormann(nodes, values, blending):
     """Compute the Floater-Hormann rational interpolant for the given nodes and
     values. See (Floater, Hormann 2007), DOI 10.1007/s00211-007-0093-y.
 
