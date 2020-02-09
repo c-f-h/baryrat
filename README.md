@@ -24,7 +24,8 @@ The "cleanup" feature for spurious poles and zeros is not currently implemented.
 ### Further algorithms
 
 The package includes functions for polynomial interpolation, rational
-interpolation with either fixed poles or fixed interpolation nodes, and more.
+interpolation with either fixed poles or fixed interpolation nodes,
+Floater-Hormann interpolation, and more.
 
 ## Installation
 
