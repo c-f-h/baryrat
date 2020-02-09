@@ -10,14 +10,14 @@ def readme():
         return fp.read()
 
 setup(
-    name = 'aaa-approx',
-    version = '1.0.2',
-    description = 'A Python implementation of the AAA algorithm for rational approximation',
+    name = 'baryrat',
+    version = '1.0.0',
+    description = 'A Python package for barycentric rational approximation',
     long_description = readme(),
     long_description_content_type = 'text/markdown',
     author = 'Clemens Hofreither',
     author_email = 'chofreither@numa.uni-linz.ac.at',
-    url = 'https://github.com/c-f-h/aaa',
+    url = 'https://github.com/c-f-h/baryrat',
     classifiers=[
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
@@ -25,7 +25,7 @@ setup(
         'Topic :: Scientific/Engineering :: Mathematics',
         'License :: OSI Approved :: BSD License',
     ],
-    py_modules = ['aaa'],
+    py_modules = ['baryrat'],
     install_requires = [
         'numpy>=1.11',
         'scipy',
