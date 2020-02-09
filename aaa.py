@@ -144,6 +144,25 @@ def aaa(F, Z, tol=1e-13, mmax=100, return_errors=False):
     r = BarycentricRational(zj, fj, wj)
     return (r, errors) if return_errors else r
 
+def interpolate_rat(values, nodes):
+    """Compute a rational function which passes through all given node/value
+    pairs. The number of nodes must be odd, and they should be passed in
+    strictly increasing or strictly decreasing order.
+    """
+    values = np.asanyarray(values)
+    nodes = np.asanyarray(nodes)
+    n = len(values) // 2 + 1
+    m = n - 1
+    if not len(values) == n + m or not len(nodes) == n + m:
+        raise ValueError('number of nodes should be odd')
+    xa, xb = nodes[0::2], nodes[1::2]
+    va, vb = values[0::2], values[1::2]
+    B = (vb[:, None] - va[None, :]) / (xb[:, None] - xa[None, :])
+    _, _, Vh = np.linalg.svd(B)
+    weights = Vh[-1, :]
+    assert len(weights) == n
+    return BarycentricRational(xa, va, weights)
+
 def interpolate_poly(values, nodes):
     """Compute the interpolating polynomial for the given nodes and values in
     barycentric form.

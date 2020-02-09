@@ -59,6 +59,15 @@ def test_zeros():
             np.array([-0.38621461,  1.43052691,  0.49999907,  1.,  0.]))
     assert np.allclose(r(zer), 0.0)
 
+def test_interpolate_rat():
+    Z = np.linspace(1, 5, 7)
+    F = np.sin(Z)
+    p = aaa.interpolate_rat(F, Z)
+    assert np.allclose(p(Z), F)
+    X = np.linspace(1, 5, 100)
+    err = np.linalg.norm(p(X) - np.sin(X), np.inf)
+    assert err < 2e-3
+
 def test_interpolate_poly():
     Z = np.linspace(1, 5, 7)
     F = np.sin(Z)
