@@ -76,7 +76,7 @@ class BarycentricRational:
 
 ################################################################################
 
-def aaa(F, Z, tol=1e-13, mmax=100, return_errors=False):
+def aaa(Z, F, tol=1e-13, mmax=100, return_errors=False):
     """Compute a rational approximation of `F` over the points `Z` using the
     AAA algorithm.
 

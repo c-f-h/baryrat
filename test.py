@@ -7,12 +7,12 @@ def test_approx():
     def f(z): return np.exp(z)*np.sin(2*np.pi*z)
     F = f(Z)
 
-    r = baryrat.aaa(F, Z, mmax=10)
+    r = baryrat.aaa(Z, F, mmax=10)
 
     assert np.linalg.norm(r(Z) - F, np.inf) < 1e-10, 'insufficient approximation'
 
     # check invoking with functions
-    r2 = baryrat.aaa(f, Z, mmax=10)
+    r2 = baryrat.aaa(Z, f, mmax=10)
     assert np.linalg.norm(r(Z) - r2(Z), np.inf) < 1e-15
 
     # check that calling r works for scalars, vectors, matrices
@@ -25,7 +25,7 @@ def test_reproduction():
     def f(z):
         return (z**3 - 2*z**2 + 4*z - 7) / ((z - p[0])*(z - p[1])*(z - p[2]))
     nodes = np.arange(1, 8, dtype=float)
-    r = baryrat.aaa(f(nodes), nodes)
+    r = baryrat.aaa(nodes, f(nodes))
     assert np.allclose(f(nodes), r(nodes))
     z = np.linspace(0, 1, 100)
     assert np.allclose(f(z), r(z))
@@ -35,7 +35,7 @@ def test_reproduction():
 def test_polres():
     Z = np.linspace(0.0, 1.0, 101)
     F = np.exp(Z) * np.sin(2*np.pi*Z)
-    r = baryrat.aaa(F, Z, mmax=6)
+    r = baryrat.aaa(Z, F, mmax=6)
     pol, res = r.polres()
 
     assert np.allclose(pol,
@@ -52,7 +52,7 @@ def test_polres():
 def test_zeros():
     Z = np.linspace(0.0, 1.0, 101)
     F = np.exp(Z) * np.sin(2*np.pi*Z)
-    r = baryrat.aaa(F, Z, mmax=6)
+    r = baryrat.aaa(Z, F, mmax=6)
     zer = r.zeros()
 
     assert np.allclose(zer,
