@@ -1,13 +1,4 @@
-"""A Python implementation of the AAA algorithm for rational approximation.
-
-For more information, see the paper
-
-  The AAA Algorithm for Rational Approximation
-  Yuji Nakatsukasa, Olivier Sete, and Lloyd N. Trefethen
-  SIAM Journal on Scientific Computing 2018 40:3, A1494-A1522
-
-as well as the Chebfun package <http://www.chebfun.org>. This code is an almost
-direct port of the Chebfun implementation of aaa to Python.
+"""A Python package for barycentric rational approximation.
 """
 
 import numpy as np
@@ -86,7 +77,8 @@ class BarycentricRational:
 ################################################################################
 
 def aaa(F, Z, tol=1e-13, mmax=100, return_errors=False):
-    """Compute a rational approximation of `F` over the points `Z`.
+    """Compute a rational approximation of `F` over the points `Z` using the
+    AAA algorithm.
 
     The nodes `Z` should be given as an array.
 
@@ -95,6 +87,15 @@ def aaa(F, Z, tol=1e-13, mmax=100, return_errors=False):
     Returns a `BarycentricRational` instance which can be called to evaluate
     the rational function, and can be queried for the poles, residues, and
     zeros of the function.
+
+    For more information, see the paper
+
+      The AAA Algorithm for Rational Approximation
+      Yuji Nakatsukasa, Olivier Sete, and Lloyd N. Trefethen
+      SIAM Journal on Scientific Computing 2018 40:3, A1494-A1522
+
+    as well as the Chebfun package <http://www.chebfun.org>. This code is an
+    almost direct port of the Chebfun implementation of aaa to Python.
     """
     Z = np.asanyarray(Z).ravel()
     if callable(F):
