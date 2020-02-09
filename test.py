@@ -1,5 +1,5 @@
 import numpy as np
-import aaa
+import baryrat
 import scipy.interpolate
 
 def test_approx():
@@ -7,12 +7,12 @@ def test_approx():
     def f(z): return np.exp(z)*np.sin(2*np.pi*z)
     F = f(Z)
 
-    r = aaa.aaa(F, Z, mmax=10)
+    r = baryrat.aaa(F, Z, mmax=10)
 
     assert np.linalg.norm(r(Z) - F, np.inf) < 1e-10, 'insufficient approximation'
 
     # check invoking with functions
-    r2 = aaa.aaa(f, Z, mmax=10)
+    r2 = baryrat.aaa(f, Z, mmax=10)
     assert np.linalg.norm(r(Z) - r2(Z), np.inf) < 1e-15
 
     # check that calling r works for scalars, vectors, matrices
@@ -25,7 +25,7 @@ def test_reproduction():
     def f(z):
         return (z**3 - 2*z**2 + 4*z - 7) / ((z - p[0])*(z - p[1])*(z - p[2]))
     nodes = np.arange(1, 8, dtype=float)
-    r = aaa.aaa(f(nodes), nodes)
+    r = baryrat.aaa(f(nodes), nodes)
     assert np.allclose(f(nodes), r(nodes))
     z = np.linspace(0, 1, 100)
     assert np.allclose(f(z), r(z))
@@ -35,7 +35,7 @@ def test_reproduction():
 def test_polres():
     Z = np.linspace(0.0, 1.0, 101)
     F = np.exp(Z) * np.sin(2*np.pi*Z)
-    r = aaa.aaa(F, Z, mmax=6)
+    r = baryrat.aaa(F, Z, mmax=6)
     pol, res = r.polres()
 
     assert np.allclose(pol,
@@ -52,7 +52,7 @@ def test_polres():
 def test_zeros():
     Z = np.linspace(0.0, 1.0, 101)
     F = np.exp(Z) * np.sin(2*np.pi*Z)
-    r = aaa.aaa(F, Z, mmax=6)
+    r = baryrat.aaa(F, Z, mmax=6)
     zer = r.zeros()
 
     assert np.allclose(zer,
@@ -62,7 +62,7 @@ def test_zeros():
 def test_interpolate_rat():
     Z = np.linspace(1, 5, 7)
     F = np.sin(Z)
-    p = aaa.interpolate_rat(F, Z)
+    p = baryrat.interpolate_rat(F, Z)
     assert np.allclose(p(Z), F)
     X = np.linspace(1, 5, 100)
     err = np.linalg.norm(p(X) - np.sin(X), np.inf)
@@ -71,7 +71,7 @@ def test_interpolate_rat():
 def test_interpolate_poly():
     Z = np.linspace(1, 5, 7)
     F = np.sin(Z)
-    p = aaa.interpolate_poly(F, Z)
+    p = baryrat.interpolate_poly(F, Z)
     p1 = scipy.interpolate.lagrange(Z, F)
     X = np.linspace(1, 5, 100)
     assert np.allclose(p(X), p1(X))
@@ -80,7 +80,7 @@ def test_interpolate_with_poles():
     Z = np.arange(1, 5)
     F = np.sin(Z)
     poles = [-1, -2, -3]
-    r = aaa.interpolate_with_poles(F, Z, poles)
+    r = baryrat.interpolate_with_poles(F, Z, poles)
     assert np.allclose(r(Z), F)
     pol, res = r.polres()
     assert np.allclose(sorted(pol), sorted(poles))
@@ -99,7 +99,7 @@ def test_interpolate_floater_hormann():
         [1, 4, 7, 8]
     ]
     for d in range(4):
-        r = aaa.floater_hormann(F, Z, d)
+        r = baryrat.floater_hormann(F, Z, d)
         assert np.allclose(r(Z), F)
         w = abs(r.weights / r.weights[0]) # normalize
         assert np.allclose(w[:4], correct_abs_weights[d])
@@ -107,6 +107,6 @@ def test_interpolate_floater_hormann():
             err = np.linalg.norm(r(X) - f(X), np.inf)
             assert err < 6.9e-2   # published error in FH2007
     # check that d=n results in polynomial interpolant
-    r = aaa.floater_hormann(F, Z, n)
+    r = baryrat.floater_hormann(F, Z, n)
     p = scipy.interpolate.lagrange(Z, F)
     assert np.allclose(r(X), p(X))
