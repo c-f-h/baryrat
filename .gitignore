@@ -1,0 +1,11 @@
+*.so
+__pycache__
+*.swp
+*_cy.c
+*_cy.cpp
+*_cy.html
+/build/
+/dist/
+*.egg-info/
+.cache
+/docs/_build/
