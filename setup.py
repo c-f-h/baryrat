@@ -16,7 +16,7 @@ setup(
     long_description = readme(),
     long_description_content_type = 'text/markdown',
     author = 'Clemens Hofreither',
-    author_email = 'chofreither@numa.uni-linz.ac.at',
+    author_email = 'clemens.hofreither@ricam.oeaw.ac.at',
     url = 'https://github.com/c-f-h/baryrat',
     classifiers=[
         'Programming Language :: Python :: 2.7',
