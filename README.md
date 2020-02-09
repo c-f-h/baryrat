@@ -5,6 +5,9 @@ polynomial approximation through the so-called barycentric representation.
 The advantage of this representation is (often significantly) improved
 stability over classical approaches.
 
+See the [API documentation](https://baryrat.readthedocs.io/) for an overview of
+the available functions.
+
 ## Features
 
 ### The AAA algorithm
