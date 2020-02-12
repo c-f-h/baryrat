@@ -12,9 +12,9 @@ class BarycentricRational:
 
         The rational function has the interpolation property r(z_j) = f_j.
         """
-        self.nodes = z
-        self.values = f
-        self.weights = w
+        self.nodes = np.asanyarray(z)
+        self.values = np.asanyarray(f)
+        self.weights = np.asanyarray(w)
 
     def __call__(self, x):
         """Evaluate rational function at all points of `x`"""

@@ -2,6 +2,14 @@ import numpy as np
 import baryrat
 import scipy.interpolate
 
+def test_init():
+    nodes = [0, 1, 2]
+    values = [1, 2, 0]
+    weights = [0.5, -1, 0.5]
+    r = baryrat.BarycentricRational(nodes, values, weights)
+    X = np.linspace(0, 2, 100)
+    assert np.allclose(r(X), -3/2*X**2 + 5/2*X + 1)
+
 def test_approx():
     Z = np.linspace(0.0, 1.0, 101)
     def f(z): return np.exp(z)*np.sin(2*np.pi*z)
