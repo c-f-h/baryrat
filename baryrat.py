@@ -80,19 +80,28 @@ def aaa(Z, F, tol=1e-13, mmax=100, return_errors=False):
     """Compute a rational approximation of `F` over the points `Z` using the
     AAA algorithm.
 
-    The nodes `Z` should be given as an array.
+    Arguments:
+        Z (array): the sampling points of the function. Unlike for interpolation
+            algorithms, where a small number of nodes is preferred, since the
+            AAA algorithm chooses its support points adaptively, it is better
+            to provide a finer mesh over the support.
+        F: the function to be approximated; can be given as a function or as an
+            array of function values over ``Z``.
+        tol: the approximation tolerance
+        mmax: the maximum number of iterations/degree of the resulting approximant
+        return_errors: if `True`, also return the history of the errors over
+            all iterations
 
-    `F` can be given as a function or as an array of function values over `Z`.
-
-    Returns a `BarycentricRational` instance which can be called to evaluate
-    the rational function, and can be queried for the poles, residues, and
-    zeros of the function.
+    Returns:
+        BarycentricRational: an object which can be called to evaluate the
+        rational function, and can be queried for the poles, residues, and
+        zeros of the function.
 
     For more information, see the paper
 
-      The AAA Algorithm for Rational Approximation
-      Yuji Nakatsukasa, Olivier Sete, and Lloyd N. Trefethen
-      SIAM Journal on Scientific Computing 2018 40:3, A1494-A1522
+      | The AAA Algorithm for Rational Approximation
+      | Yuji Nakatsukasa, Olivier Sete, and Lloyd N. Trefethen
+      | SIAM Journal on Scientific Computing 2018 40:3, A1494-A1522
 
     as well as the Chebfun package <http://www.chebfun.org>. This code is an
     almost direct port of the Chebfun implementation of aaa to Python.
@@ -181,6 +190,9 @@ def interpolate_poly(nodes, values):
 def interpolate_with_poles(nodes, values, poles):
     """Compute a rational function which interpolates the given values at the
     given nodes and which has the given poles.
+
+    The arrays ``nodes`` and ``values`` should have length `n`, and
+    ``poles`` should have length `n - 1`.
     """
     n = len(nodes)
     if n != len(values) or n != len(poles) + 1:
