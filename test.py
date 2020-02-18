@@ -70,6 +70,14 @@ def test_zeros():
     zer2 = r.zeros(use_mp=True)
     assert np.allclose(sorted(zer), sorted(zer2))
 
+def test_reciprocal():
+    nodes = np.linspace(0, 1, 4)
+    r = baryrat.floater_hormann(nodes, np.exp(-nodes), 2)
+    rr = r.reciprocal()
+
+    Z = np.linspace(0, 1, 100)
+    assert np.allclose(1 / r(Z), rr(Z))
+
 def test_interpolate_rat():
     Z = np.linspace(1, 5, 7)
     F = np.sin(Z)

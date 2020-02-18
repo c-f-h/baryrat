@@ -121,12 +121,12 @@ class BarycentricRational:
             evals = scipy.linalg.eigvals(E, B)
             return np.real_if_close(evals[np.isfinite(evals)])
 
-        B = np.eye(m+1)
-        B[0,0] = 0
-        E = np.block([[0, wj],
-                      [fj[:,None], np.diag(zj)]])
-        evals = scipy.linalg.eigvals(E, B)
-        return np.real_if_close(evals[np.isfinite(evals)])
+    def reciprocal(self):
+        """Return a new `BarycentricRational` which is the reciprocal of this one."""
+        return BarycentricRational(
+                self.nodes.copy(),
+                1 / self.values,
+                self.weights * self.values)
 
 ################################################################################
 
