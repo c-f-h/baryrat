@@ -61,11 +61,14 @@ def test_zeros():
     Z = np.linspace(0.0, 1.0, 101)
     F = np.exp(Z) * np.sin(2*np.pi*Z)
     r = baryrat.aaa(Z, F, mmax=6)
-    zer = r.zeros()
 
+    zer = r.zeros()
     assert np.allclose(zer,
             np.array([-0.38621461,  1.43052691,  0.49999907,  1.,  0.]))
     assert np.allclose(r(zer), 0.0)
+
+    zer2 = r.zeros(use_mp=True)
+    assert np.allclose(sorted(zer), sorted(zer2))
 
 def test_interpolate_rat():
     Z = np.linspace(1, 5, 7)
@@ -92,6 +95,10 @@ def test_interpolate_with_poles():
     assert np.allclose(r(Z), F)
     pol, res = r.polres()
     assert np.allclose(sorted(pol), sorted(poles))
+    pol1 = r.poles()
+    pol2 = r.poles(use_mp=True)
+    assert np.allclose(sorted(pol1), sorted(poles))
+    assert np.allclose(sorted(pol2), sorted(poles))
 
 def test_interpolate_floater_hormann():
     n = 10

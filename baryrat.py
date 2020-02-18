@@ -4,6 +4,37 @@
 import numpy as np
 import scipy.linalg
 
+def _compute_roots(w, x, use_mp):
+    # Cf.:
+    # Knockaert, L. (2008). A simple and accurate algorithm for barycentric
+    # rational interpolation. IEEE Signal processing letters, 15, 154-157.
+    if use_mp:
+        from mpmath import mp
+        if use_mp is True:
+            use_mp = 100
+        mp.dps = use_mp
+
+        ak = mp.matrix(w)
+        ak /= sum(ak)
+        bk = mp.matrix(x)
+
+        M = mp.diag(bk)
+        for i in range(M.rows):
+            for j in range(M.cols):
+                M[i,j] -= ak[i]*bk[j]
+        lam = mp.eig(M, left=False, right=False)
+        lam = np.array(lam, dtype=complex)
+    else:
+        # the same procedure in standard double precision
+        ak = w / w.sum()
+        M = np.diag(x) - np.outer(ak, x)
+        lam = scipy.linalg.eigvals(M)
+
+    # remove one simple root
+    lam = np.delete(lam, np.argmin(abs(lam)))
+    return np.real_if_close(lam)
+
+
 class BarycentricRational:
     """A class representing a rational function in barycentric representation.
     """
@@ -41,6 +72,15 @@ class BarycentricRational:
             r.shape = x.shape
             return r
 
+    def poles(self, use_mp=False):
+        """Return the poles of the rational function.
+
+        If ``use_mp`` is ``True``, uses the ``mpmath`` package to compute the
+        result using 100-digit precision arithmetic. If an integer is passed,
+        uses that number of digits to compute the result.
+        """
+        return _compute_roots(self.weights, self.nodes, use_mp=use_mp)
+
     def polres(self):
         """Return the poles and residues of the rational function."""
         zj,fj,wj = self.nodes, self.values, self.weights
@@ -62,10 +102,24 @@ class BarycentricRational:
 
         return pol, res
 
-    def zeros(self):
-        """Return the zeros of the rational function."""
-        zj,fj,wj = self.nodes, self.values, self.weights
-        m = len(wj)
+    def zeros(self, use_mp=False):
+        """Return the zeros of the rational function.
+
+        If ``use_mp`` is ``True``, uses the ``mpmath`` package to compute the
+        result using 100-digit precision arithmetic. If an integer is passed,
+        uses that number of digits to compute the result.
+        """
+        if use_mp:
+            return _compute_roots(self.weights*self.values, self.nodes,
+                    use_mp=use_mp)
+        else:
+            zj,fj,wj = self.nodes, self.values, self.weights
+            B = np.eye(len(wj) + 1)
+            B[0,0] = 0
+            E = np.block([[0, wj],
+                          [fj[:,None], np.diag(zj)]])
+            evals = scipy.linalg.eigvals(E, B)
+            return np.real_if_close(evals[np.isfinite(evals)])
 
         B = np.eye(m+1)
         B[0,0] = 0
