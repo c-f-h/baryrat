@@ -37,18 +37,22 @@ def _compute_roots(w, x, use_mp):
 
 class BarycentricRational:
     """A class representing a rational function in barycentric representation.
+
+    Args:
+        z (array): the interpolation nodes
+        f (array): the values at the interpolation nodes
+        w (array): the weights
+
+    The rational function has the interpolation property r(z_j) = f_j at all
+    nodes where w_j != 0.
     """
     def __init__(self, z, f, w):
-        """Barycentric representation of rational function with nodes z, values f and weights w.
-
-        The rational function has the interpolation property r(z_j) = f_j.
-        """
         self.nodes = np.asanyarray(z)
         self.values = np.asanyarray(f)
         self.weights = np.asanyarray(w)
 
     def __call__(self, x):
-        """Evaluate rational function at all points of `x`"""
+        """Evaluate rational function at all points of `x`."""
         zj,fj,wj = self.nodes, self.values, self.weights
 
         xv = np.asanyarray(x).ravel()

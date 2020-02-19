@@ -7,6 +7,7 @@ Welcome to baryrat's documentation!
 
 .. automodule:: baryrat
    :members:
+   :special-members: __call__
 
 
 
