@@ -133,3 +133,11 @@ def test_interpolate_floater_hormann():
     r = baryrat.floater_hormann(Z, F, n)
     p = scipy.interpolate.lagrange(Z, F)
     assert np.allclose(r(X), p(X))
+
+def test_brasil():
+    def f(x): return np.sqrt(x)
+    r, info = baryrat.brasil(f, [0,1], 10, tol=1e-5, info=True)
+    assert info.converged
+    assert info.deviation <= 1e-5
+    assert info.error <= 5e-6
+    assert(len(info.errors) == info.iterations + 1)

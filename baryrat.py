@@ -295,3 +295,175 @@ def floater_hormann(nodes, values, blending):
                     if j != i])
         weights[i] = (-1.0)**(i-d) * weight
     return BarycentricRational(nodes, values, weights)
+
+
+def _piecewise_mesh(nodes, n):
+    """Build a mesh over an interval with subintervals described by the array
+    ``nodes``. Each subinterval has ``n`` points spaced uniformly between the
+    two neighboring nodes.  The final mesh has ``(len(nodes) - 1) * n`` points.
+    """
+    #z = np.concatenate(([z0], nodes, [z1]))
+    M = len(nodes)
+    return np.concatenate(tuple(
+        np.linspace(nodes[i], nodes[i+1], n, endpoint=(i==M-2))
+        for i in range(M - 1)))
+
+def local_maxima_bisect(g, nodes, num_iter=10):
+    L, R = nodes[:-1], nodes[1:]
+    # compute 3 x m array of endpoints and midpoints
+    z = np.vstack((L, (L + R) / 2, R))
+    values = g(z)
+    m = z.shape[1]
+
+    for k in range(num_iter):
+        # compute quarter points
+        q = np.vstack(((z[0] + z[1]) / 2, (z[1] + z[2])/ 2))
+        qval = g(q)
+
+        # move triple of points to be centered on the maximum
+        for j in range(m):
+            maxk = np.argmax([qval[0,j], values[1,j], qval[1,j]])
+            if maxk == 0:
+                z[1,j], z[2,j] = q[0,j], z[1,j]
+                values[1,j], values[2,j] = qval[0,j], values[1,j]
+            elif maxk == 1:
+                z[0,j], z[2,j] = q[0,j], q[1,j]
+                values[0,j], values[2,j] = qval[0,j], qval[1,j]
+            else:
+                z[0,j], z[1,j] = z[1,j], q[1,j]
+                values[0,j], values[1,j] = values[1,j], qval[1,j]
+
+    # find maximum per column (usually the midpoint)
+    maxidx = values.argmax(axis=0)
+    # select abscissae and values at maxima
+    return z[maxidx, np.arange(m)], values[maxidx, np.arange(m)]
+
+def local_maxima_sample(g, nodes, N):
+    Z = _piecewise_mesh(nodes, N).reshape((-1, N))
+    vals = g(Z)
+    maxk = vals.argmax(axis=1)
+    nn = np.arange(Z.shape[0])
+    return Z[nn, maxk], vals[nn, maxk]
+
+def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
+        step_factor=0.1, npi=100, init_steps=100, info=False):
+    """Best Rational Approximation by Successive Interval Length adjustment.
+
+    Arguments:
+        f: the real scalar function to be approximated
+        interval: the bounds (a, b) of the approximation interval
+        deg: the degree of the numerator and denominator of the rational approximation
+        tol: the maximum allowed deviation from equioscillation
+        maxiter: the maximum number of iterations
+        max_step_size: the maximum allowed step size
+        step_factor: factor for adaptive step size choice
+        npi: points per interval for error calculation
+        init_steps: how many steps of the initialization iteration to run
+        info: whether to return an additional object with details
+
+    Returns:
+        BarycentricRational: the computed rational approximation. If `info` is
+        True, instead returns a pair containing the approximation and an
+        object with additional information (see below).
+
+    The `info` object returned along with the approximation if `info=True` has
+    the following members:
+
+    * **converged** (bool): whether the method converged to the desired tolerance **tol**
+    * **error** (float): the maximum error of the approximation
+    * **deviation** (float): the relative error between the smallest and the largest
+      equioscillation peak. The convergence criterion is **deviation** <= **tol**.
+    * **nodes** (array): the abscissae of the interpolation nodes  (2*deg + 1)
+    * **iterations** (int): the number of iterations used, including the initialization phase
+    * **errors** (array): the history of the maximum error over all iterations
+    * **deviations** (array): the history of the deviation over all iterations
+    * **stepsizes** (array): the history of the adaptive step size over all iterations
+
+    Additional information about the resulting rational function, such as poles,
+    residues and zeroes, can be queried from the :class:`BarycentricRational` object
+    itself.
+    """
+    a, b = interval
+    assert a < b, 'Invalid interval'
+    n = 2 * deg + 1     # number of interpolation nodes
+    errors = []
+    stepsize = np.nan
+
+    # start with Chebyshev nodes
+    nodes = (1 - np.cos((2*np.arange(1,n+1) - 1) / (2*n) * np.pi)) / 2 * (b - a) + a
+
+    for k in range(init_steps + maxiter):
+        r = interpolate_rat(nodes, f(nodes))
+
+        # determine local maxima per interval
+        all_nodes = np.concatenate(([a], nodes, [b]))
+        errfun = lambda x: abs(f(x) - r(x))
+        if npi:
+            local_max_x, local_max = local_maxima_sample(errfun, all_nodes, npi)
+        else:
+            local_max_x, local_max = local_maxima_bisect(errfun, all_nodes, num_iter=7)
+
+        max_err = local_max.max()
+        deviation = max_err / local_max.min() - 1
+        errors.append((max_err, deviation, stepsize))
+
+        converged = deviation <= tol
+        if converged or k == init_steps + maxiter - 1:
+            # convergence or maxiter reached -- return result
+            if not converged:
+                print('warning: BRASIL did not converge; dev={0:.3}, err={1:.3}'.format(deviation, max_err))
+            if info:
+                from collections import namedtuple
+                Info = namedtuple('Info',
+                        'converged error deviation nodes iterations ' +
+                        'errors deviations stepsizes')
+                errors = np.array(errors)
+                return r, Info(
+                    converged, max_err, deviation, nodes, k,
+                    errors[:,0], errors[:,1], errors[:,2],
+                )
+            else:
+                return r
+
+        if k < init_steps:
+            # PHASE 1:
+            # move an interpolation node to the point of largest error
+            max_intv_i = local_max.argmax()
+            max_err_x = local_max_x[max_intv_i]
+            # we can't move a node to the boundary, so check for that case
+            # and move slightly inwards
+            if max_err_x == a:
+                max_err_x = (3 * a + nodes[0]) / 4
+            elif max_err_x == b:
+                max_err_x = (nodes[-1] + 3 * b) / 4
+            # find the node to move (neighboring the interval with smallest error)
+            min_k = local_max.argmin()
+            if min_k == 0:
+                min_j = 0
+            elif min_k == n:
+                min_j = n - 1
+            else:
+                # of the two nodes on this interval, choose the farther one
+                if abs(max_err_x - nodes[min_k-1]) < abs(max_err_x - nodes[min_k]):
+                    min_j = min_k
+                else:
+                    min_j = min_k - 1
+            # move the node and re-sort the array
+            nodes[min_j] = max_err_x
+            nodes.sort()
+
+        else:
+            # PHASE 2:
+            # global interval size adjustment
+            intv_lengths = np.diff(all_nodes)
+
+            mean_err = np.mean(local_max)
+            max_dev = abs(local_max - mean_err).max()
+            normalized_dev = (local_max - mean_err) / max_dev
+            stepsize = min(max_step_size, step_factor * max_dev / mean_err)
+            scaling = (1.0 - stepsize)**normalized_dev
+
+            intv_lengths *= scaling
+            # rescale so that they add up to b-a again
+            intv_lengths *= (b - a) / intv_lengths.sum()
+            nodes = np.cumsum(intv_lengths)[:-1] + a
