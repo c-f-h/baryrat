@@ -357,7 +357,9 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
         maxiter: the maximum number of iterations
         max_step_size: the maximum allowed step size
         step_factor: factor for adaptive step size choice
-        npi: points per interval for error calculation
+        npi: points per interval for error calculation. If `npi < 0`,
+            bisection with `-npi` iterations is used instead of
+            sampling
         init_steps: how many steps of the initialization iteration to run
         info: whether to return an additional object with details
 
@@ -398,10 +400,10 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
         # determine local maxima per interval
         all_nodes = np.concatenate(([a], nodes, [b]))
         errfun = lambda x: abs(f(x) - r(x))
-        if npi:
+        if npi > 0:
             local_max_x, local_max = local_maxima_sample(errfun, all_nodes, npi)
         else:
-            local_max_x, local_max = local_maxima_bisect(errfun, all_nodes, num_iter=7)
+            local_max_x, local_max = local_maxima_bisect(errfun, all_nodes, num_iter=-npi)
 
         max_err = local_max.max()
         deviation = max_err / local_max.min() - 1
