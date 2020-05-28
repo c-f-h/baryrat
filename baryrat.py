@@ -309,10 +309,10 @@ def _piecewise_mesh(nodes, n):
         for i in range(M - 1)))
 
 def local_maxima_bisect(g, nodes, num_iter=10):
-    L, R = nodes[:-1], nodes[1:]
+    L, R = nodes[1:-2], nodes[2:-1]
     # compute 3 x m array of endpoints and midpoints
     z = np.vstack((L, (L + R) / 2, R))
-    values = g(z)
+    values = g(z[1])
     m = z.shape[1]
 
     for k in range(num_iter):
@@ -322,21 +322,125 @@ def local_maxima_bisect(g, nodes, num_iter=10):
 
         # move triple of points to be centered on the maximum
         for j in range(m):
-            maxk = np.argmax([qval[0,j], values[1,j], qval[1,j]])
+            maxk = np.argmax([qval[0,j], values[j], qval[1,j]])
             if maxk == 0:
                 z[1,j], z[2,j] = q[0,j], z[1,j]
-                values[1,j], values[2,j] = qval[0,j], values[1,j]
+                values[j] = qval[0,j]
             elif maxk == 1:
                 z[0,j], z[2,j] = q[0,j], q[1,j]
-                values[0,j], values[2,j] = qval[0,j], qval[1,j]
             else:
                 z[0,j], z[1,j] = z[1,j], q[1,j]
-                values[0,j], values[1,j] = values[1,j], qval[1,j]
+                values[j] = qval[1,j]
 
     # find maximum per column (usually the midpoint)
-    maxidx = values.argmax(axis=0)
+    #maxidx = values.argmax(axis=0)
     # select abscissae and values at maxima
-    return z[maxidx, np.arange(m)], values[maxidx, np.arange(m)]
+    #Z, gZ = z[maxidx, np.arange(m)], values[np.arange(m)]
+    Z, gZ = np.empty(m+2), np.empty(m+2)
+    Z[1:-1] = z[1, :]
+    gZ[1:-1] = values
+    # treat the boundary intervals specially since usually the maximum is at the boundary
+    Z[0], gZ[0] = _boundary_search(g, nodes[0], nodes[1], num_iter=3)
+    Z[-1], gZ[-1] = _boundary_search(g, nodes[-2], nodes[-1], num_iter=3)
+    return Z, gZ
+
+def local_maxima_golden(g, nodes, num_iter):
+    # vectorized version of golden section search
+    golden_mean = (3.0 - np.sqrt(5.0)) / 2   # 0.381966...
+    L, R = nodes[1:-2], nodes[2:-1]     # skip boundary intervals (treated below)
+    # compute 3 x m array of endpoints and midpoints
+    z = np.vstack((L, L + (R-L)*golden_mean, R))
+    m = z.shape[1]
+    all_m = np.arange(m)
+    gB = g(z[1])
+
+    for k in range(num_iter):
+        # z[1] = midpoints
+        mids = (z[0] + z[2]) / 2
+
+        # compute new nodes according to golden section
+        farther_idx = (z[1] <= mids).astype(int) * 2 # either 0 or 2
+        X = z[1] + golden_mean * (z[farther_idx, all_m] - z[1])
+        gX = g(X)
+
+        for j in range(m):
+            x = X[j]
+            gx = gX[j]
+
+            b = z[1,j]
+            if gx > gB[j]:
+                if x > b:
+                    z[0,j] = z[1,j]
+                else:
+                    z[2,j] = z[1,j]
+                z[1,j] = x
+                gB[j] = gx
+            else:
+                if x < b:
+                    z[0,j] = x
+                else:
+                    z[2,j] = x
+
+    # prepare output arrays
+    Z, gZ = np.empty(m+2), np.empty(m+2)
+    Z[1:-1] = z[1, :]
+    gZ[1:-1] = gB
+    # treat the boundary intervals specially since usually the maximum is at the boundary
+    # (no bracket available!)
+    Z[0], gZ[0] = _boundary_search(g, nodes[0], nodes[1], num_iter=3)
+    Z[-1], gZ[-1] = _boundary_search(g, nodes[-2], nodes[-1], num_iter=3)
+    return Z, gZ
+
+def _boundary_search(g, a, c, num_iter):
+    X = [a, c]
+    Xvals = [g(a), g(c)]
+    max_side = 0 if (Xvals[0] >= Xvals[1]) else 1
+    other_side = 1 - max_side
+
+    for k in range(num_iter):
+        xm = (X[0] + X[1]) / 2
+        gm = g(xm)
+        if gm < Xvals[max_side]:
+            # no new maximum found; shrink interval and iterate
+            X[other_side] = xm
+            Xvals[other_side] = gm
+        else:
+            # found a bracket for the minimum
+            return _golden_search(g, X[0], X[1], num_iter=num_iter-k)
+    return X[max_side], Xvals[max_side]
+
+def _golden_search(g, a, c, num_iter=20):
+    golden_mean = 0.5 * (3.0 - np.sqrt(5.0))
+
+    b = (a + c) / 2
+    gb = g(b)
+    ga, gc = g(a), g(c)
+    if not (gb >= ga and gb >= gc):
+        # not bracketed - maximum may be at the boundary
+        return _boundary_search(g, a, c, num_iter)
+    for k in range(num_iter):
+        mid = (a + c) / 2
+        if b > mid:
+            x = b + golden_mean * (a - b)
+        else:
+            x = b + golden_mean * (c - b)
+        gx = g(x)
+
+        if gx > gb:
+            # found a larger point, use it as center
+            if x > b:
+                a = b
+            else:
+                c = b
+            b = x
+            gb = gx
+        else:
+            # point is smaller, use it as boundary
+            if x < b:
+                a = x
+            else:
+                c = x
+    return b, gb
 
 def local_maxima_sample(g, nodes, N):
     Z = _piecewise_mesh(nodes, N).reshape((-1, N))
@@ -358,7 +462,7 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
         max_step_size: the maximum allowed step size
         step_factor: factor for adaptive step size choice
         npi: points per interval for error calculation. If `npi < 0`,
-            bisection with `-npi` iterations is used instead of
+            golden section search with `-npi` iterations is used instead of
             sampling
         init_steps: how many steps of the initialization iteration to run
         info: whether to return an additional object with details
@@ -403,7 +507,7 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
         if npi > 0:
             local_max_x, local_max = local_maxima_sample(errfun, all_nodes, npi)
         else:
-            local_max_x, local_max = local_maxima_bisect(errfun, all_nodes, num_iter=-npi)
+            local_max_x, local_max = local_maxima_golden(errfun, all_nodes, num_iter=-npi)
 
         max_err = local_max.max()
         deviation = max_err / local_max.min() - 1
