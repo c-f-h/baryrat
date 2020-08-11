@@ -87,18 +87,25 @@ class BarycentricRational:
         """
         return _compute_roots(self.weights, self.nodes, use_mp=use_mp)
 
-    def polres(self):
-        """Return the poles and residues of the rational function."""
+    def polres(self, use_mp=False):
+        """Return the poles and residues of the rational function.
+
+        The ``use_mp`` argument has the same meaning as for ``poles()`` and
+        is only used during computation of the poles.
+        """
         zj,fj,wj = self.nodes, self.values, self.weights
         m = len(wj)
 
         # compute poles
-        B = np.eye(m+1)
-        B[0,0] = 0
-        E = np.block([[0, wj],
-                      [np.ones((m,1)), np.diag(zj)]])
-        evals = scipy.linalg.eigvals(E, B)
-        pol = np.real_if_close(evals[np.isfinite(evals)])
+        if use_mp:
+            pol = self.poles(use_mp=use_mp)
+        else:
+            B = np.eye(m+1)
+            B[0,0] = 0
+            E = np.block([[0, wj],
+                          [np.ones((m,1)), np.diag(zj)]])
+            evals = scipy.linalg.eigvals(E, B)
+            pol = np.real_if_close(evals[np.isfinite(evals)])
 
         # compute residues via formula for simple poles of quotients of analytic functions
         C_pol = 1.0 / (pol[:,None] - zj[None,:])

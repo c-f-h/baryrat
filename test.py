@@ -39,6 +39,8 @@ def test_reproduction():
     assert np.allclose(f(z), r(z))
     pol, res = r.polres()
     assert np.allclose(sorted(p), sorted(pol))
+    pol, res = r.polres(use_mp=True)
+    assert np.allclose(sorted(p), sorted(pol))
 
 def test_polres():
     Z = np.linspace(0.0, 1.0, 101)
