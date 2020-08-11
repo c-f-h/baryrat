@@ -4,6 +4,8 @@
 import numpy as np
 import scipy.linalg
 
+__version__ = '1.1.0'
+
 def _compute_roots(w, x, use_mp):
     # Cf.:
     # Knockaert, L. (2008). A simple and accurate algorithm for barycentric
