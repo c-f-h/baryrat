@@ -59,6 +59,9 @@ def test_polres():
     polvals = r(pol)
     assert np.min(np.abs(polvals)) > 1e13
 
+    # check that gain == r(inf)
+    assert np.allclose(r.gain(), r(1e14))
+
 def test_zeros():
     Z = np.linspace(0.0, 1.0, 101)
     F = np.exp(Z) * np.sin(2*np.pi*Z)

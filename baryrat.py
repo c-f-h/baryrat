@@ -134,6 +134,12 @@ class BarycentricRational:
             evals = scipy.linalg.eigvals(E, B)
             return np.real_if_close(evals[np.isfinite(evals)])
 
+    def gain(self):
+        """The gain in a poles-zeros-gain representation of the rational function,
+        or equivalently, the value at infinity.
+        """
+        return np.sum(self.values * self.weights) / np.sum(self.weights)
+
     def reciprocal(self):
         """Return a new `BarycentricRational` which is the reciprocal of this one."""
         return BarycentricRational(
