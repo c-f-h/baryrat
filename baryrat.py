@@ -4,7 +4,7 @@
 import numpy as np
 import scipy.linalg
 
-__version__ = '1.1.0'
+__version__ = '1.2.0'
 
 def _compute_roots(w, x, use_mp):
     # Cf.:
