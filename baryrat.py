@@ -465,7 +465,7 @@ def local_maxima_sample(g, nodes, N):
     return Z[nn, maxk], vals[nn, maxk]
 
 def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
-        step_factor=0.1, npi=100, init_steps=100, info=False):
+        step_factor=0.1, npi=100, init_steps=100, poly=False, info=False):
     """Best Rational Approximation by Successive Interval Length adjustment.
 
     Arguments:
@@ -480,6 +480,7 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
             golden section search with `-npi` iterations is used instead of
             sampling
         init_steps: how many steps of the initialization iteration to run
+        poly: if true, compute polynomial best approximation instead
         info: whether to return an additional object with details
 
     Returns:
@@ -506,15 +507,20 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
     """
     a, b = interval
     assert a < b, 'Invalid interval'
-    n = 2 * deg + 1     # number of interpolation nodes
+    if poly:
+        n = deg + 1
+    else:
+        n = 2 * deg + 1     # number of interpolation nodes
     errors = []
     stepsize = np.nan
 
     # start with Chebyshev nodes
     nodes = (1 - np.cos((2*np.arange(1,n+1) - 1) / (2*n) * np.pi)) / 2 * (b - a) + a
 
+    interp = interpolate_poly if poly else interpolate_rat
+
     for k in range(init_steps + maxiter):
-        r = interpolate_rat(nodes, f(nodes))
+        r = interp(nodes, f(nodes))
 
         # determine local maxima per interval
         all_nodes = np.concatenate(([a], nodes, [b]))

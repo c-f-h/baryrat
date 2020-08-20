@@ -140,9 +140,27 @@ def test_interpolate_floater_hormann():
     assert np.allclose(r(X), p(X))
 
 def test_brasil():
-    def f(x): return np.sqrt(x)
-    r, info = baryrat.brasil(f, [0,1], 10, tol=1e-5, info=True)
+    r, info = baryrat.brasil(np.sqrt, [0,1], 10, tol=1e-5, info=True)
     assert info.converged
     assert info.deviation <= 1e-5
     assert info.error <= 5e-6
     assert(len(info.errors) == info.iterations + 1)
+
+def test_brasil_poly():
+    # problem with known error
+    # http://www-solar.mcs.st-and.ac.uk/~clare/Lectures/num-analysis/Numan_chap4.pdf
+    p, info = baryrat.brasil(np.exp, [0,1], 1, tol=1e-12, poly=True, info=True)
+    assert info.converged
+    m = np.exp(1) - 1
+    theta = np.log(m)
+    c = (m + np.exp(1) - m*theta - m) / 2
+    E = 1 - c
+    assert np.allclose(info.error, E)
+    # https://doi.org/10.1007/s10543-009-0240-1
+    def f(x): return np.sin(np.exp(x))
+    p, info = baryrat.brasil(f, [-1,1], 10, poly=True, info=True)
+    assert np.allclose(info.error, 1.78623400e-6)
+    #
+    def f(x): return np.sqrt(x + 1)
+    p, info = baryrat.brasil(f, [-1,1], 10, tol=1e-8, poly=True, info=True)
+    assert np.allclose(info.error, 1.978007008380e-2)
