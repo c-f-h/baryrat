@@ -99,6 +99,16 @@ def test_interpolate_rat():
     err = np.linalg.norm(p(X) - np.sin(X), np.inf)
     assert err < 2e-3
 
+def test_interpolate_rat_complex():
+    Z = np.linspace(0.0, 1.0, 9)
+    def f(z): return np.exp(2j*np.pi*z)
+    F = f(Z)
+    r = baryrat.interpolate_rat(Z, F)
+    assert np.allclose(r(Z), F)     # check interpolation property
+    X = np.linspace(0.0, 1.0, 100)
+    err = np.linalg.norm(r(X) - f(X), np.inf)
+    assert err < 1e-4               # check interpolation error
+
 def test_interpolate_poly():
     Z = np.linspace(1, 5, 7)
     F = np.sin(Z)
@@ -106,6 +116,16 @@ def test_interpolate_poly():
     p1 = scipy.interpolate.lagrange(Z, F)
     X = np.linspace(1, 5, 100)
     assert np.allclose(p(X), p1(X))
+
+def test_interpolate_poly_complex():
+    Z = np.linspace(0.0, 1.0, 9)
+    def f(z): return np.exp(2j*np.pi*z)
+    F = f(Z)
+    p = baryrat.interpolate_poly(Z, F)
+    assert np.allclose(p(Z), F)     # check interpolation property
+    X = np.linspace(0.0, 1.0, 100)
+    err = np.linalg.norm(p(X) - f(X), np.inf)
+    assert err < 2e-3               # check interpolation error
 
 def test_interpolate_with_poles():
     Z = np.arange(1, 5)

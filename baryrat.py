@@ -242,7 +242,7 @@ def interpolate_rat(nodes, values):
     va, vb = values[0::2], values[1::2]
     B = (vb[:, None] - va[None, :]) / (xb[:, None] - xa[None, :])
     _, _, Vh = np.linalg.svd(B)
-    weights = Vh[-1, :]
+    weights = Vh[-1, :].conj()
     assert len(weights) == n
     return BarycentricRational(xa, va, weights)
 
