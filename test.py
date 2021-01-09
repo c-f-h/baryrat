@@ -28,6 +28,13 @@ def test_approx():
     assert r(np.ones(7)).shape == (7,)
     assert r(np.ones((3,2))).shape == (3,2)
 
+def test_aaa_complex():
+    Z = np.linspace(0.0, 1.0, 101)
+    def f(z): return np.exp(2j*np.pi*z)
+    F = f(Z)
+    r = baryrat.aaa(Z, F, mmax=8)
+    assert np.linalg.norm(r(Z) - F, np.inf) < 1e-10, 'insufficient approximation'
+
 def test_reproduction():
     p = [-1.0, -2.0, -3.0]
     def f(z):
