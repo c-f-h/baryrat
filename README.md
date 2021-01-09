@@ -10,6 +10,26 @@ the available functions.
 
 ## Features
 
+### Best rational approximation using BRASIL
+
+The package implements the novel BRASIL algorithm for best rational approximation;
+see [this preprint](https://www.ricam.oeaw.ac.at/files/reports/20/rep20-37.pdf)
+to learn more.
+
+The following example computes the best uniform rational approximation of degree 5
+to a given function in the interval [0, pi]:
+
+```python
+import numpy as np
+import baryrat
+
+def f(x): return np.sin(x) * np.exp(x)
+r = baryrat.brasil(f, [0,np.pi], 5)
+```
+
+The rational function `r` can then be evaluated at arbitrary nodes, its poles computed,
+and more. See the [documentation](https://baryrat.readthedocs.io/) for details.
+
 ### The AAA algorithm
 
 The package includes a Python implementation of the AAA algorithm for rational
@@ -42,13 +62,15 @@ dependencies. Install it using pip:
 Here's an example of how to approximate a function in the interval [0,1]
 using the AAA algorithm:
 
-    import numpy as np
-    from baryrat import aaa
+```python
+import numpy as np
+from baryrat import aaa
 
-    Z = np.linspace(0.0, 1.0, 1000)
-    F = np.exp(Z) * np.sin(2*np.pi*Z)
+Z = np.linspace(0.0, 1.0, 1000)
+F = np.exp(Z) * np.sin(2*np.pi*Z)
 
-    r = aaa(Z, F, mmax=10)
+r = aaa(Z, F, mmax=10)
+```
 
 Instead of the maximum number of terms `mmax`, it's also possible to specify
 the error tolerance `tol`.  Both arguments work exactly as in the MATLAB
@@ -58,22 +80,30 @@ The returned object `r` is an instance of the class
 `baryrat.BarycentricRational` and can be called like a function. For instance,
 you can compute the error on `Z` like this:
 
-    err = F - r(Z)
-    print(np.linalg.norm(err, np.inf))
+```python
+err = F - r(Z)
+print(np.linalg.norm(err, np.inf))
+```
 
 If you are interested in the poles and residues of the computed rational function,
 you can query them like
 
-    pol, res = r.polres()
+```python
+pol, res = r.polres()
+```
 
 and the zeroes using
 
-    zer = r.zeros()
+```python
+zer = r.zeros()
+```
 
 Finally, the nodes, values and weights used for interpolation (called `zj`,
 `fj` and `wj` in the original implementation) can be accessed as properties:
 
-    r.nodes
-    r.values
-    r.weights
+```python
+r.nodes
+r.values
+r.weights
+```
 
