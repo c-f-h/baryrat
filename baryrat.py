@@ -469,7 +469,7 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
     """Best Rational Approximation by Successive Interval Length adjustment.
 
     Arguments:
-        f: the real scalar function to be approximated
+        f: the scalar function to be approximated
         interval: the bounds (a, b) of the approximation interval
         deg: the degree of the numerator and denominator of the rational approximation
         tol: the maximum allowed deviation from equioscillation
