@@ -175,6 +175,7 @@ def aaa(Z, F, tol=1e-13, mmax=100, return_errors=False):
       | The AAA Algorithm for Rational Approximation
       | Yuji Nakatsukasa, Olivier Sete, and Lloyd N. Trefethen
       | SIAM Journal on Scientific Computing 2018 40:3, A1494-A1522
+      | https://doi.org/10.1137/16M1106122
 
     as well as the Chebfun package <http://www.chebfun.org>. This code is an
     almost direct port of the Chebfun implementation of aaa to Python.
