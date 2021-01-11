@@ -13,7 +13,8 @@ the available functions.
 ### Best rational approximation using BRASIL
 
 The package implements the novel BRASIL algorithm for best rational approximation;
-see [this preprint](https://www.ricam.oeaw.ac.at/files/reports/20/rep20-37.pdf)
+see [the paper](https://doi.org/10.1007/s11075-020-01042-0) or
+[the preprint](https://www.ricam.oeaw.ac.at/files/reports/20/rep20-37.pdf)
 to learn more.
 
 The following example computes the best uniform rational approximation of degree 5
