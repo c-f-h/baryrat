@@ -468,6 +468,9 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
         step_factor=0.1, npi=100, init_steps=100, poly=False, info=False):
     """Best Rational Approximation by Successive Interval Length adjustment.
 
+    References:
+        https://doi.org/10.1007/s11075-020-01042-0
+
     Arguments:
         f: the scalar function to be approximated
         interval: the bounds (a, b) of the approximation interval
