@@ -93,11 +93,32 @@ def test_reciprocal():
 def test_interpolate_rat():
     Z = np.linspace(1, 5, 7)
     F = np.sin(Z)
-    p = baryrat.interpolate_rat(Z, F)
-    assert np.allclose(p(Z), F)
+    r = baryrat.interpolate_rat(Z, F)
+    assert np.allclose(r(Z), F)
     X = np.linspace(1, 5, 100)
-    err = np.linalg.norm(p(X) - np.sin(X), np.inf)
+    err = np.linalg.norm(r(X) - np.sin(X), np.inf)
     assert err < 2e-3
+    #
+    p, q = r.numerator(), r.denominator()
+    assert np.allclose(p(X) / q(X), r(X))
+    assert r.degree() == (3, 3)
+
+def test_reduce_order():
+    nodes = np.linspace(0, 1, 11)
+    r = baryrat.interpolate_rat(nodes, np.ones_like(nodes))
+    assert r.order == 5
+    r2 = r.reduce_order()
+    assert r2.order == 0
+    X = np.linspace(0, 1, 25)
+    assert np.allclose(r2(X), 1.0)
+    #
+    # another test with full order (no reduction)
+    r = baryrat.interpolate_rat(nodes, np.sin(nodes))
+    assert r.order == 5
+    r2 = r.reduce_order()
+    assert r2.order == 5
+    X = np.linspace(0, 1, 25)
+    assert np.allclose(r2(X), r(X))
 
 def test_interpolate_rat_complex():
     Z = np.linspace(0.0, 1.0, 9)

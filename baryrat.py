@@ -78,6 +78,14 @@ class BarycentricRational:
             r.shape = x.shape
             return r
 
+    @property
+    def order(self):
+        """The order of the barycentric rational function, that is, the maximum
+        degree that its numerator and denominator may have, or the number of
+        interpolation nodes minus one.
+        """
+        return len(self.nodes) - 1
+
     def poles(self, use_mp=False):
         """Return the poles of the rational function.
 
@@ -146,6 +154,73 @@ class BarycentricRational:
                 self.nodes.copy(),
                 1 / self.values,
                 self.weights * self.values)
+
+    def numerator(self):
+        """Return a new :class:`BarycentricRational` which represents the numerator polynomial."""
+        weights = _polynomial_weights(self.nodes)
+        return BarycentricRational(self.nodes.copy(), self.values * self.weights / weights, weights)
+
+    def denominator(self):
+        """Return a new :class:`BarycentricRational` which represents the denominator polynomial."""
+        weights = _polynomial_weights(self.nodes)
+        return BarycentricRational(self.nodes.copy(), self.weights / weights, weights)
+
+    def degree_numer(self, tol=1e-12):
+        """Compute the true degree of the numerator polynomial.
+
+        Uses a result from [Berrut, Mittelmann 1997].
+        """
+        N = len(self.nodes) - 1
+        for defect in range(N):
+            if abs(np.sum(self.values * self.weights * (self.nodes ** defect))) > tol:
+                return N - defect
+        return 0
+
+    def degree_denom(self, tol=1e-12):
+        """Compute the true degree of the denominator polynomial.
+
+        Uses a result from [Berrut, Mittelmann 1997].
+        """
+        N = len(self.nodes) - 1
+        for defect in range(N):
+            if abs(np.sum(self.weights * (self.nodes ** defect))) > tol:
+                return N - defect
+        return 0
+
+    def degree(self, tol=1e-12):
+        """Compute the pair `(m,n)` of true degrees of the numerator and denominator."""
+        return (self.degree_numer(tol=tol), self.degree_denom(tol=tol))
+
+    def reduce_order(self):
+        """Return a new :class:`BarycentricRational` which represents the same rational
+        function as this one, but with minimal possible order.
+
+        See (Ionita 2013), PhD thesis.
+        """
+        # sample at intermediate nodes and compute Loewner matrix
+        aux_nodes = (self.nodes[1:] + self.nodes[:-1]) / 2
+        aux_v = self(aux_nodes)
+        L = (aux_v[:, None] - self.values[None, :]) / (aux_nodes[:, None] - self.nodes[None, :])
+
+        # determine the order as the rank of L (cf. (Ionita 2013))
+        order = np.linalg.matrix_rank(L)
+        if order == self.order:
+            return BarycentricRational(self.nodes.copy(), self.values.copy(), self.weights.copy())
+        n = order + 1           # number of nodes in new barycentric function
+        scale = 1 if n==1 else int((len(self.nodes) - 1) / (n - 1))    # distribute new nodes over the old ones
+        subset = np.arange(0, scale*n, scale)      # choose a subset of n nodes from self.nodes
+
+        # compute Loewner matrix for new subset of nodes
+        nodes = self.nodes[subset]
+        values = self.values[subset]
+        aux_nodes = (nodes[1:] + nodes[:-1]) / 2
+        aux_v = self(aux_nodes)
+        L = (aux_v[:, None] - values[None, :]) / (aux_nodes[:, None] - self.nodes[None, subset])
+
+        # compute weight vector in nullspace
+        _, _, Vh = np.linalg.svd(L)
+        w = Vh[-1, :].conj()
+        return BarycentricRational(nodes, values, w)
 
 ################################################################################
 
@@ -233,6 +308,8 @@ def interpolate_rat(nodes, values):
     pairs. The number of nodes must be odd, and they should be passed in
     strictly increasing or strictly decreasing order.
     """
+    # ref: (Knockaert 2008), doi:10.1109/LSP.2007.913583
+    # see also: (Ionita 2013), PhD thesis, Rice U
     values = np.asanyarray(values)
     nodes = np.asanyarray(nodes)
     n = len(values) // 2 + 1
@@ -241,11 +318,20 @@ def interpolate_rat(nodes, values):
         raise ValueError('number of nodes should be odd')
     xa, xb = nodes[0::2], nodes[1::2]
     va, vb = values[0::2], values[1::2]
+    # compute the Loewner matrix
     B = (vb[:, None] - va[None, :]) / (xb[:, None] - xa[None, :])
+    # choose a weight vector in the nullspace of B
     _, _, Vh = np.linalg.svd(B)
     weights = Vh[-1, :].conj()
     assert len(weights) == n
     return BarycentricRational(xa, va, weights)
+
+def _polynomial_weights(x):
+    n = len(x)
+    return np.array([
+            1.0 / np.prod([x[i] - x[j] for j in range(n) if j != i])
+            for i in range(n)
+    ])
 
 def interpolate_poly(nodes, values):
     """Compute the interpolating polynomial for the given nodes and values in
@@ -254,11 +340,7 @@ def interpolate_poly(nodes, values):
     n = len(nodes)
     if n != len(values):
         raise ValueError('input arrays should have the same length')
-    x = nodes
-    weights = np.array([
-            1.0 / np.prod([x[i] - x[j] for j in range(n) if j != i])
-            for i in range(n)
-    ])
+    weights = _polynomial_weights(nodes)
     return BarycentricRational(nodes, values, weights)
 
 def interpolate_with_poles(nodes, values, poles):
@@ -268,6 +350,7 @@ def interpolate_with_poles(nodes, values, poles):
     The arrays ``nodes`` and ``values`` should have length `n`, and
     ``poles`` should have length `n - 1`.
     """
+    # ref: (Knockaert 2008), doi:10.1109/LSP.2007.913583
     n = len(nodes)
     if n != len(values) or n != len(poles) + 1:
         raise ValueError('invalid length of arrays')
