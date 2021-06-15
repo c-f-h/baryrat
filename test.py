@@ -103,6 +103,25 @@ def test_interpolate_rat():
     assert np.allclose(p(X) / q(X), r(X))
     assert r.degree() == (3, 3)
 
+def test_interpolate_with_degree():
+    X = np.linspace(0, 1, 100)
+    ##
+    def f(x):
+        return (x + 3) / ((x + 1) * (x + 2))
+    Z = np.linspace(0, 1, 4)
+    r = baryrat.interpolate_with_degree(Z, f(Z), (1, 2))
+    assert np.allclose(f(X), r(X))
+    assert r.order == 2
+    assert r.degree() == (1, 2)
+    ##
+    def f(x):
+        return (x * (x + 1) * (x + 2)) / (x + 3)
+    Z = np.linspace(0, 1, 5)
+    r = baryrat.interpolate_with_degree(Z, f(Z), (3, 1))
+    assert np.allclose(f(X), r(X))
+    assert r.order == 3
+    assert r.degree() == (3, 1)
+
 def test_reduce_order():
     nodes = np.linspace(0, 1, 11)
     r = baryrat.interpolate_rat(nodes, np.ones_like(nodes))

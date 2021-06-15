@@ -49,6 +49,8 @@ class BarycentricRational:
     nodes where w_j != 0.
     """
     def __init__(self, z, f, w):
+        if not (len(z) == len(f) == len(w)):
+            raise ValueError('arrays z, f, and w must have the same length')
         self.nodes = np.asanyarray(z)
         self.values = np.asanyarray(f)
         self.weights = np.asanyarray(w)
@@ -304,9 +306,19 @@ def aaa(Z, F, tol=1e-13, mmax=100, return_errors=False):
     return (r, errors) if return_errors else r
 
 def interpolate_rat(nodes, values):
-    """Compute a rational function which passes through all given node/value
-    pairs. The number of nodes must be odd, and they should be passed in
-    strictly increasing or strictly decreasing order.
+    """Compute a rational function which interpolates the given nodes/values.
+
+    Args:
+        nodes (array): the interpolation nodes; must have odd length and
+            be passed in strictly increasing or decreasing order
+        values (array): the values at the interpolation nodes
+
+    Returns:
+        BarycentricRational: the rational interpolant. If there are `2n + 1` nodes,
+        both the numerator and denominator have degree at most `n`.
+
+    References:
+        https://doi.org/10.1109/LSP.2007.913583
     """
     # ref: (Knockaert 2008), doi:10.1109/LSP.2007.913583
     # see also: (Ionita 2013), PhD thesis, Rice U
@@ -325,6 +337,65 @@ def interpolate_rat(nodes, values):
     weights = Vh[-1, :].conj()
     assert len(weights) == n
     return BarycentricRational(xa, va, weights)
+
+def _pseudo_equi_nodes(n, k):
+    """Choose `k` out of `n` nodes in a quasi-equispaced way."""
+    if k > n:
+        raise ValueError("k must not be larger than n")
+    else:
+        return np.rint(np.linspace(0.0, n-1, k)).astype(int)
+
+def _defect_matrix(x, i0, iend, f=None):
+    powers_m = np.arange(i0, iend)
+    W = x[None, :] ** powers_m[:, None]
+    if f is not None:
+        W *= f[None, :]
+    return W
+
+def interpolate_with_degree(nodes, values, deg):
+    """Compute a rational function which interpolates the given nodes/values
+    with given degree `m` of the numerator and `n` of the denominator.
+
+    Args:
+        nodes (array): the interpolation nodes
+        values (array): the values at the interpolation nodes
+        deg: a pair `(m, n)` of the degrees of the interpolating rational
+            function. The number of interpolation nodes must be `m + n + 1`.
+
+    Returns:
+        BarycentricRational: the rational interpolant
+
+    References:
+        https://doi.org/10.1016/S0377-0427(96)00163-X
+    """
+    m, n = deg
+    nn = m + n + 1
+    if len(nodes) != nn or len(values) != nn:
+        raise ValueError('number of interpolation nodes must be m + n + 1')
+    if n == 0:
+        return interpolate_poly(nodes, values)
+    elif m == n:
+        return interpolate_rat(nodes, values)
+    else:
+        N = max(m, n)       # order of barycentric rational function
+        # split given values into primary and secondary nodes
+        primary_indices = _pseudo_equi_nodes(nn, N + 1)
+        secondary_indices = np.setdiff1d(np.arange(nn), primary_indices, assume_unique=True)
+        xp, vp = nodes[primary_indices],   values[primary_indices]
+        xs, vs = nodes[secondary_indices], values[secondary_indices]
+        # compute Loewner matrix - shape: (m + n - N) x (N + 1)
+        L = (vs[:, None] - vp[None, :]) / (xs[:, None] - xp[None, :])
+        # add weight constraints for denominator and numerator degree; see (Berrut, Mittelmann 1997)
+        # B has shape N x (N + 1)
+        B = np.vstack((
+            L,
+            _defect_matrix(xp, 0, N - n),        # reduce maximum denominator degree by N - n
+            _defect_matrix(xp, 0, N - m, vp)     # reduce maximum numerator degree by N - m
+        ))
+        # choose a weight vector in the nullspace of B
+        _, _, Vh = np.linalg.svd(B)
+        weights = Vh[-1, :].conj()
+        return BarycentricRational(xp, vp, weights)
 
 def _polynomial_weights(x):
     n = len(x)
