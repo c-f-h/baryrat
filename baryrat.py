@@ -100,7 +100,7 @@ class BarycentricRational:
     def polres(self, use_mp=False):
         """Return the poles and residues of the rational function.
 
-        The ``use_mp`` argument has the same meaning as for ``poles()`` and
+        The ``use_mp`` argument has the same meaning as for :meth:`poles` and
         is only used during computation of the poles.
         """
         zj,fj,wj = self.nodes, self.values, self.weights
