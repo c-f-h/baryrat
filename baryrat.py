@@ -623,6 +623,9 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
         step_factor=0.1, npi=100, init_steps=100, poly=False, info=False):
     """Best Rational Approximation by Successive Interval Length adjustment.
 
+    Computes best rational or polynomial approximations in the maximum norm by
+    the BRASIL algorithm (see reference below).
+
     References:
         https://doi.org/10.1007/s11075-020-01042-0
 
@@ -636,7 +639,8 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
         step_factor: factor for adaptive step size choice
         npi: points per interval for error calculation. If `npi < 0`,
             golden section search with `-npi` iterations is used instead of
-            sampling
+            sampling. For high-accuracy results, `npi=-30` is typically a good
+            choice.
         init_steps: how many steps of the initialization iteration to run
         poly: if true, compute polynomial best approximation instead
         info: whether to return an additional object with details
