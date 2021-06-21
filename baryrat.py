@@ -620,7 +620,7 @@ def local_maxima_sample(g, nodes, N):
     return Z[nn, maxk], vals[nn, maxk]
 
 def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
-        step_factor=0.1, npi=100, init_steps=100, poly=False, info=False):
+        step_factor=0.1, npi=100, init_steps=100, info=False):
     """Best Rational Approximation by Successive Interval Length adjustment.
 
     Computes best rational or polynomial approximations in the maximum norm by
@@ -632,7 +632,9 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
     Arguments:
         f: the scalar function to be approximated
         interval: the bounds (a, b) of the approximation interval
-        deg: the degree of the numerator and denominator of the rational approximation
+        deg: the degree of the numerator `m` and denominator `n` of the
+            rational approximation; either an integer (`m=n`) or a pair `(m, n)`.
+            If `n = 0`, a polynomial best approximation is computed.
         tol: the maximum allowed deviation from equioscillation
         maxiter: the maximum number of iterations
         max_step_size: the maximum allowed step size
@@ -642,7 +644,6 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
             sampling. For high-accuracy results, `npi=-30` is typically a good
             choice.
         init_steps: how many steps of the initialization iteration to run
-        poly: if true, compute polynomial best approximation instead
         info: whether to return an additional object with details
 
     Returns:
@@ -669,17 +670,28 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
     """
     a, b = interval
     assert a < b, 'Invalid interval'
-    if poly:
-        n = deg + 1
+
+    if np.isscalar(deg):
+        m = n = deg
     else:
-        n = 2 * deg + 1     # number of interpolation nodes
+        if len(deg) != 2:
+            raise TypeError("'deg' must be an integer or pair of integers")
+        m, n = deg
+    nn = m + n + 1      # number of interpolation nodes
+
     errors = []
     stepsize = np.nan
 
     # start with Chebyshev nodes
-    nodes = (1 - np.cos((2*np.arange(1,n+1) - 1) / (2*n) * np.pi)) / 2 * (b - a) + a
+    nodes = (1 - np.cos((2*np.arange(1,nn+1) - 1) / (2*nn) * np.pi)) / 2 * (b - a) + a
 
-    interp = interpolate_poly if poly else interpolate_rat
+    # choose proper interpolation routine
+    if n == 0:
+        interp = interpolate_poly
+    elif m == n:
+        interp = interpolate_rat
+    else:
+        interp = lambda x,f: interpolate_with_degree(x, f, (m, n))
 
     for k in range(init_steps + maxiter):
         r = interp(nodes, f(nodes))
@@ -729,8 +741,8 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
             min_k = local_max.argmin()
             if min_k == 0:
                 min_j = 0
-            elif min_k == n:
-                min_j = n - 1
+            elif min_k == nn:
+                min_j = nn - 1
             else:
                 # of the two nodes on this interval, choose the farther one
                 if abs(max_err_x - nodes[min_k-1]) < abs(max_err_x - nodes[min_k]):

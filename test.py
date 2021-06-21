@@ -216,7 +216,7 @@ def test_brasil():
 def test_brasil_poly():
     # problem with known error
     # http://www-solar.mcs.st-and.ac.uk/~clare/Lectures/num-analysis/Numan_chap4.pdf
-    p, info = baryrat.brasil(np.exp, [0,1], 1, tol=1e-12, poly=True, info=True)
+    p, info = baryrat.brasil(np.exp, [0,1], (1,0), tol=1e-12, info=True)
     assert info.converged
     m = np.exp(1) - 1
     theta = np.log(m)
@@ -225,9 +225,22 @@ def test_brasil_poly():
     assert np.allclose(info.error, E)
     # https://doi.org/10.1007/s10543-009-0240-1
     def f(x): return np.sin(np.exp(x))
-    p, info = baryrat.brasil(f, [-1,1], 10, poly=True, info=True)
+    p, info = baryrat.brasil(f, [-1,1], (10,0), npi=-30, info=True)     # use golden section search
     assert np.allclose(info.error, 1.78623400e-6)
     #
     def f(x): return np.sqrt(x + 1)
-    p, info = baryrat.brasil(f, [-1,1], 10, tol=1e-8, poly=True, info=True)
+    p, info = baryrat.brasil(f, [-1,1], (10,0), tol=1e-8, info=True)
     assert np.allclose(info.error, 1.978007008380e-2)
+
+def test_brasil_deg():
+    r, info = baryrat.brasil(np.sqrt, [0,1], (10,5), tol=1e-8, info=True)
+    assert info.converged
+    assert info.deviation <= 1e-8
+    assert info.error <= 6e-5
+    assert(len(info.errors) == info.iterations + 1)
+    #
+    r, info = baryrat.brasil(np.sqrt, [0,1], (5,10), tol=1e-8, info=True)
+    assert info.converged
+    assert info.deviation <= 1e-8
+    assert info.error <= 8e-5
+    assert(len(info.errors) == info.iterations + 1)
