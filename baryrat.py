@@ -713,6 +713,16 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
             # convergence or maxiter reached -- return result
             if not converged:
                 print('warning: BRASIL did not converge; dev={0:.3}, err={1:.3}'.format(deviation, max_err))
+            else:
+                # Until now, we have only equilibrated the absolute errors.
+                # Check equioscillation property for the signed errors to make
+                # sure we actually found the best approximation.
+                signed_errors = f(local_max_x) - r(local_max_x)
+                # normalize them so that they are all 1 in case of equioscillation
+                signed_errors /= (-1)**np.arange(len(signed_errors)) * np.sign(signed_errors[0]) * max_err
+                equi_err = abs(1.0 - signed_errors).max()
+                if equi_err > tol:
+                    print('warning: equioscillation property not satisfied, deviation={0:.3}'.format(equi_err))
             if info:
                 from collections import namedtuple
                 Info = namedtuple('Info',
