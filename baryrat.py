@@ -5,7 +5,7 @@ import numpy as np
 import scipy.linalg
 import math
 
-__version__ = '1.3.0'
+__version__ = '1.4.0'
 
 def _compute_roots(w, x, use_mp):
     # Cf.:
@@ -67,7 +67,7 @@ class BarycentricRational:
             r = C.dot(wj*fj) / C.dot(wj)
 
         # for z in zj, the above produces NaN; we check for this
-        nans = np.nonzero(np.isnan(r))[0]
+        nans = np.nonzero(r != r)[0]
         for i in nans:
             # is xv[i] one of our nodes?
             nodeidx = np.nonzero(xv[i] == zj)[0]
