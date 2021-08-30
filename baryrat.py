@@ -3,6 +3,7 @@
 
 import numpy as np
 import scipy.linalg
+import math
 
 __version__ = '1.3.0'
 
@@ -79,6 +80,60 @@ class BarycentricRational:
         else:
             r.shape = x.shape
             return r
+
+    def eval_deriv(self, x, k=1):
+        """Evaluate the `k`-th derivative of this rational function at a scalar
+        node `x`, or at each point of an array `x`. Only the cases `k <= 2` are
+        currently implemented.
+
+        Note that this function may incur significant numerical error if `x` is
+        very close (but not exactly equal) to a node of the barycentric
+        rational function.
+
+        References:
+            https://doi.org/10.1090/S0025-5718-1986-0842136-8 (C. Schneider and
+            W. Werner, 1986)
+        """
+        if k == 0:
+            return self(x)
+
+        # the implementation below assumes scalars, so use numpy to vectorize
+        # if we got an array
+        if not np.isscalar(x):
+            return np.vectorize(lambda X: self.eval_deriv(X, k=k), otypes=[x.dtype])(x)
+
+        # is x one of our nodes?
+        nodeidx = np.nonzero(x == self.nodes)[0]
+        if len(nodeidx) > 0:
+            i = nodeidx[0]      # node index of x
+            dx = self.nodes - x
+            dx[i] = np.inf   # set i-th summand to 0
+
+            if k == 1:
+                # first-order divided differences
+                dd = (self(self.nodes) - self(x)) / dx
+            elif k == 2:
+                # second-order divided differences with nodes (x, x, z_i)
+                # (note that repeated nodes correspond to the first derivative)
+                dd1 = (self(self.nodes) - self(x)) / dx
+                dd = (dd1 - self.eval_deriv(x, k=1)) / dx
+            else:
+                raise NotImplementedError('derivatives higher than 2 not implemented')
+            return -np.sum(dd * self.weights) / self.weights[i] * math.factorial(k)
+
+        else:
+            # x is not a node -- use divided differences
+            if k == 1:
+                # first-order divided differences
+                dd = (self(self.nodes) - self(x)) / (self.nodes - x)
+            elif k == 2:
+                # second-order divided differences with nodes (x, x, z_i)
+                # (note that repeated nodes correspond to the first derivative)
+                dd1 = (self(self.nodes) - self(x)) / (self.nodes - x)
+                dd = (dd1 - self.eval_deriv(x, k=1)) / (self.nodes - x)
+            else:
+                raise NotImplementedError('derivatives higher than 2 not implemented')
+            return BarycentricRational(self.nodes, dd, self.weights)(x) * math.factorial(k)
 
     @property
     def order(self):

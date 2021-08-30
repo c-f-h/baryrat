@@ -206,6 +206,24 @@ def test_interpolate_floater_hormann():
     p = scipy.interpolate.lagrange(Z, F)
     assert np.allclose(r(X), p(X))
 
+def test_deriv():
+    def f(x):
+        return (x + 3) / ((x + 1) * (x + 2))
+    def df(x):
+        return -2 / (x + 1)**2 + 1 / (x + 2)**2
+    def d2f(x):
+        return 4 / (x + 1)**3 - 2 / (x + 2)**3
+
+    # compute barycentric representation of f
+    Z = np.linspace(0, 1, 4)
+    r = baryrat.interpolate_with_degree(Z, f(Z), (1, 2))
+
+    X = np.linspace(0, 1, 50)
+    X[:len(r.nodes)] = r.nodes  # also test evaluation exactly on the nodes
+
+    assert np.allclose(r.eval_deriv(X), df(X))
+    assert np.allclose(r.eval_deriv(X, k=2), d2f(X))
+
 def test_brasil():
     r, info = baryrat.brasil(np.sqrt, [0,1], 10, tol=1e-5, info=True)
     assert info.converged
