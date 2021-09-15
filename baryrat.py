@@ -607,7 +607,7 @@ def local_maxima_golden(g, nodes, num_iter):
                     z[2,j] = x
 
     # prepare output arrays
-    Z, gZ = np.empty(m+2), np.empty(m+2)
+    Z, gZ = np.empty(m+2, dtype=z.dtype), np.empty(m+2, dtype=gB.dtype)
     Z[1:-1] = z[1, :]
     gZ[1:-1] = gB
     # treat the boundary intervals specially since usually the maximum is at the boundary
