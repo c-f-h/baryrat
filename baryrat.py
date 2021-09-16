@@ -37,6 +37,13 @@ def _compute_roots(w, x, use_mp):
     lam = np.delete(lam, np.argmin(abs(lam)))
     return np.real_if_close(lam)
 
+def _mp_svd(A, full_matrices=True):
+    """Convenience wrapper for mpmath high-precision SVD."""
+    from mpmath import mp
+    AA = mp.matrix(A.tolist())
+    U, Sigma, VT = mp.svd(AA, full_matrices=full_matrices)
+    return np.array(U.tolist()), np.array(Sigma.tolist()).ravel(), np.array(VT.tolist())
+
 
 class BarycentricRational:
     """A class representing a rational function in barycentric representation.
@@ -360,13 +367,14 @@ def aaa(Z, F, tol=1e-13, mmax=100, return_errors=False):
     r = BarycentricRational(zj, fj, wj)
     return (r, errors) if return_errors else r
 
-def interpolate_rat(nodes, values):
+def interpolate_rat(nodes, values, use_mp=False):
     """Compute a rational function which interpolates the given nodes/values.
 
     Args:
         nodes (array): the interpolation nodes; must have odd length and
             be passed in strictly increasing or decreasing order
         values (array): the values at the interpolation nodes
+        use_mp (bool): whether to use ``mpmath`` for extended precision
 
     Returns:
         BarycentricRational: the rational interpolant. If there are `2n + 1` nodes,
@@ -388,9 +396,11 @@ def interpolate_rat(nodes, values):
     # compute the Loewner matrix
     B = (vb[:, None] - va[None, :]) / (xb[:, None] - xa[None, :])
     # choose a weight vector in the nullspace of B
-    _, _, Vh = np.linalg.svd(B)
+    if use_mp:
+        _, _, Vh = _mp_svd(B)
+    else:
+        _, _, Vh = np.linalg.svd(B)
     weights = Vh[-1, :].conj()
-    assert len(weights) == n
     return BarycentricRational(xa, va, weights)
 
 def _pseudo_equi_nodes(n, k):
@@ -425,7 +435,7 @@ def _defect_matrix_arnoldi(x, m, f=None):
         Q.append(q)
     return np.array(Q)
 
-def interpolate_with_degree(nodes, values, deg):
+def interpolate_with_degree(nodes, values, deg, use_mp=False):
     """Compute a rational function which interpolates the given nodes/values
     with given degree `m` of the numerator and `n` of the denominator.
 
@@ -434,6 +444,7 @@ def interpolate_with_degree(nodes, values, deg):
         values (array): the values at the interpolation nodes
         deg: a pair `(m, n)` of the degrees of the interpolating rational
             function. The number of interpolation nodes must be `m + n + 1`.
+        use_mp (bool): whether to use ``mpmath`` for extended precision
 
     Returns:
         BarycentricRational: the rational interpolant
@@ -448,7 +459,7 @@ def interpolate_with_degree(nodes, values, deg):
     if n == 0:
         return interpolate_poly(nodes, values)
     elif m == n:
-        return interpolate_rat(nodes, values)
+        return interpolate_rat(nodes, values, use_mp=use_mp)
     else:
         N = max(m, n)       # order of barycentric rational function
         # split given values into primary and secondary nodes
@@ -466,7 +477,10 @@ def interpolate_with_degree(nodes, values, deg):
             _defect_matrix_arnoldi(xp, N - m, vp)     # reduce maximum numerator degree by N - m
         ))
         # choose a weight vector in the nullspace of B
-        _, _, Vh = np.linalg.svd(B)
+        if use_mp:
+            _, _, Vh = _mp_svd(B)
+        else:
+            _, _, Vh = np.linalg.svd(B)
         weights = Vh[-1, :].conj()
         return BarycentricRational(xp, vp, weights)
 
