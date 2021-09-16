@@ -407,6 +407,24 @@ def _defect_matrix(x, i0, iend, f=None):
         W *= f[None, :]
     return W
 
+def _defect_matrix_arnoldi(x, m, f=None):
+    # Arnoldi-type orthonormalization of the defect matrix.
+    # Based on an idea from Filip et al., 2018, p. A2431.
+    # doi: 10.1137/17M1132409
+    if m == 0:
+        return np.empty((0, len(x)), dtype=x.dtype)
+    if f is None:
+        f = 0 * x + 1
+    f = f / np.linalg.norm(f)
+    Q = [f]
+    for k in range(1, m):
+        q = Q[-1] * x
+        for j in range(len(Q)):
+            q -= Q[j] * np.inner(q, Q[j])
+        q /= np.linalg.norm(q)
+        Q.append(q)
+    return np.array(Q)
+
 def interpolate_with_degree(nodes, values, deg):
     """Compute a rational function which interpolates the given nodes/values
     with given degree `m` of the numerator and `n` of the denominator.
@@ -444,8 +462,8 @@ def interpolate_with_degree(nodes, values, deg):
         # B has shape N x (N + 1)
         B = np.vstack((
             L,
-            _defect_matrix(xp, 0, N - n),        # reduce maximum denominator degree by N - n
-            _defect_matrix(xp, 0, N - m, vp)     # reduce maximum numerator degree by N - m
+            _defect_matrix_arnoldi(xp, N - n),        # reduce maximum denominator degree by N - n
+            _defect_matrix_arnoldi(xp, N - m, vp)     # reduce maximum numerator degree by N - m
         ))
         # choose a weight vector in the nullspace of B
         _, _, Vh = np.linalg.svd(B)
