@@ -44,6 +44,19 @@ def _mp_svd(A, full_matrices=True):
     U, Sigma, VT = mp.svd(AA, full_matrices=full_matrices)
     return np.array(U.tolist()), np.array(Sigma.tolist()).ravel(), np.array(VT.tolist())
 
+def _mp_qr(A):
+    """Convenience wrapper for mpmath high-precision QR decomposition."""
+    from mpmath import mp
+    AA = mp.matrix(A.tolist())
+    Q, R = mp.qr(AA, mode='full')
+    return np.array(Q.tolist()), np.array(R.tolist())
+
+def _nullspace_vector(A, use_mp=False):
+    if use_mp:
+        Q, _ = _mp_qr(A.T)
+    else:
+        Q, _ = scipy.linalg.qr(A.T, mode='full')
+    return Q[:, -1].conj()
 
 class BarycentricRational:
     """A class representing a rational function in barycentric representation.
@@ -285,8 +298,7 @@ class BarycentricRational:
         L = (aux_v[:, None] - values[None, :]) / (aux_nodes[:, None] - self.nodes[None, subset])
 
         # compute weight vector in nullspace
-        _, _, Vh = np.linalg.svd(L)
-        w = Vh[-1, :].conj()
+        w = _nullspace_vector(L)
         return BarycentricRational(nodes, values, w)
 
 ################################################################################
@@ -399,11 +411,7 @@ def interpolate_rat(nodes, values, use_mp=False):
     # compute the Loewner matrix
     B = (vb[:, None] - va[None, :]) / (xb[:, None] - xa[None, :])
     # choose a weight vector in the nullspace of B
-    if use_mp:
-        _, _, Vh = _mp_svd(B)
-    else:
-        _, _, Vh = np.linalg.svd(B)
-    weights = Vh[-1, :].conj()
+    weights = _nullspace_vector(B, use_mp=use_mp)
     return BarycentricRational(xa, va, weights)
 
 def _pseudo_equi_nodes(n, k):
@@ -480,11 +488,7 @@ def interpolate_with_degree(nodes, values, deg, use_mp=False):
             _defect_matrix_arnoldi(xp, N - m, vp)     # reduce maximum numerator degree by N - m
         ))
         # choose a weight vector in the nullspace of B
-        if use_mp:
-            _, _, Vh = _mp_svd(B)
-        else:
-            _, _, Vh = np.linalg.svd(B)
-        weights = Vh[-1, :].conj()
+        weights = _nullspace_vector(B, use_mp=use_mp)
         return BarycentricRational(xp, vp, weights)
 
 def _polynomial_weights(x):
@@ -504,7 +508,7 @@ def interpolate_poly(nodes, values):
     weights = _polynomial_weights(nodes)
     return BarycentricRational(nodes, values, weights)
 
-def interpolate_with_poles(nodes, values, poles):
+def interpolate_with_poles(nodes, values, poles, use_mp=False):
     """Compute a rational function which interpolates the given values at the
     given nodes and which has the given poles.
 
@@ -521,8 +525,7 @@ def interpolate_with_poles(nodes, values, poles):
     # compute Cauchy matrix
     C = 1.0 / (poles[:,None] - nodes[None,:])
     # compute null space
-    _, _, Vh = np.linalg.svd(C)
-    weights = Vh[-1, :]
+    weights = _nullspace_vector(C, use_mp=use_mp)
     return BarycentricRational(nodes, values, weights)
 
 def floater_hormann(nodes, values, blending):

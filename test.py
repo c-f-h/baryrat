@@ -1,6 +1,7 @@
 import numpy as np
 import baryrat
 import scipy.interpolate
+from mpmath import mp
 
 def test_init():
     nodes = [0, 1, 2]
@@ -122,6 +123,47 @@ def test_interpolate_with_degree():
     assert r.order == 3
     assert r.degree() == (3, 1)
 
+def mp_linspace(a, b, n):
+    return np.array(mp.linspace(a, b, n))
+
+def test_interpolate_rat_mp():
+    mp.dps = 100
+    X = mp_linspace(0, 1, 100)
+    ##
+    def f(x):
+        return (x + 3) / ((x + 1) * (x + 2))
+    Z = mp_linspace(0, 1, 5)
+    r = baryrat.interpolate_rat(Z, f(Z), use_mp=True)
+    assert np.linalg.norm(f(X) - r(X)) < 1e-90
+    assert r.order == 2
+    ##
+    def f(x):
+        return (x * (x + 1) * (x + 2)) / (x + 3)
+    Z = mp_linspace(0, 1, 7)
+    r = baryrat.interpolate_rat(Z, f(Z), use_mp=True)
+    assert np.linalg.norm(f(X) - r(X)) < 1e-90
+    assert r.order == 3
+
+def test_interpolate_with_degree_mp():
+    mp.dps = 100
+    X = mp_linspace(0, 1, 100)
+    ##
+    def f(x):
+        return (x + 3) / ((x + 1) * (x + 2))
+    Z = mp_linspace(0, 1, 4)
+    r = baryrat.interpolate_with_degree(Z, f(Z), (1, 2), use_mp=True)
+    assert np.linalg.norm(f(X) - r(X)) < 1e-90
+    assert r.order == 2
+    assert r.degree() == (1, 2)
+    ##
+    def f(x):
+        return (x * (x + 1) * (x + 2)) / (x + 3)
+    Z = mp_linspace(0, 1, 5)
+    r = baryrat.interpolate_with_degree(Z, f(Z), (3, 1), use_mp=True)
+    assert np.linalg.norm(f(X) - r(X)) < 1e-90
+    assert r.order == 3
+    assert r.degree() == (3, 1)
+
 def test_reduce_order():
     nodes = np.linspace(0, 1, 11)
     r = baryrat.interpolate_rat(nodes, np.ones_like(nodes))
@@ -179,6 +221,17 @@ def test_interpolate_with_poles():
     pol2 = r.poles(use_mp=True)
     assert np.allclose(sorted(pol1), sorted(poles))
     assert np.allclose(sorted(pol2), sorted(poles))
+
+def test_interpolate_with_poles_mp():
+    mp.dps = 100
+    Z = mp_linspace(1.0, 4.0, 4)
+    F = np.vectorize(mp.sin)(Z)
+    poles = [-3, -2, -1]
+    r = baryrat.interpolate_with_poles(Z, F, poles, use_mp=True)
+    assert np.array_equal(r(Z), F)
+    pol, res = r.polres(use_mp=True)
+    pol.sort()
+    assert np.linalg.norm(pol - poles) < 1e-90
 
 def test_interpolate_floater_hormann():
     n = 10
