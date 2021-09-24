@@ -68,24 +68,27 @@ class BarycentricRational:
         zj,fj,wj = self.nodes, self.values, self.weights
 
         xv = np.asanyarray(x).ravel()
-        # ignore inf/nan for now
-        with np.errstate(divide='ignore', invalid='ignore'):
-            C = 1.0 / (xv[:,None] - zj[None,:])
-            r = C.dot(wj*fj) / C.dot(wj)
+        D = xv[:,None] - zj[None,:]
+        # find indices where x is exactly on a node
+        (node_xi, node_zi) = np.nonzero(D == 0)
 
-        # for z in zj, the above produces NaN; we check for this
-        nans = np.nonzero(r != r)[0]
-        for i in nans:
-            # is xv[i] one of our nodes?
-            nodeidx = np.nonzero(xv[i] == zj)[0]
-            if len(nodeidx) > 0:
-                # then replace the NaN with the value at that node
-                r[i] = fj[nodeidx[0]]
+        with np.errstate(divide='ignore', invalid='ignore'):
+            if len(node_xi) == 0:       # no zero divisors
+                C = 1.0 / D
+                r = C.dot(wj * fj) / C.dot(wj)
+            else:
+                # set divisor to 1 to avoid division by zero
+                D[node_xi, node_zi] = 1
+                C = 1.0 / D
+                r = C.dot(wj * fj) / C.dot(wj)
+                # fix evaluation at nodes to corresponding fj
+                # TODO: this is only correct if wj != 0
+                r[node_xi] = fj[node_zi]
 
         if np.isscalar(x):
             return r[0]
         else:
-            r.shape = x.shape
+            r.shape = np.shape(x)
             return r
 
     def eval_deriv(self, x, k=1):
