@@ -52,6 +52,15 @@ def _mp_qr(A):
     return np.array(Q.tolist()), np.array(R.tolist())
 
 def _nullspace_vector(A, use_mp=False):
+    if A.shape[0] == 0:
+        # some LAPACK implementations have trouble with size 0 matrices
+        result = np.zeros(A.shape[1])
+        result[0] = 1.0
+        if use_mp:
+            from mpmath import mpf
+            result = np.vectorize(mpf)(result)
+        return result
+
     if use_mp:
         Q, _ = _mp_qr(A.T)
     else:
