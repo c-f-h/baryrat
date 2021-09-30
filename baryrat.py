@@ -21,9 +21,6 @@ def _compute_roots(w, x, use_mp):
     # rational interpolation. IEEE Signal processing letters, 15, 154-157.
     if use_mp:
         from mpmath import mp
-        if use_mp is True:
-            use_mp = 100
-        mp.dps = use_mp
 
         ak = mp.matrix(w)
         ak /= sum(ak)
@@ -211,8 +208,8 @@ class BarycentricRational:
         """Return the poles of the rational function.
 
         If ``use_mp`` is ``True``, uses the ``mpmath`` package to compute the
-        result using 100-digit precision arithmetic. If an integer is passed,
-        uses that number of digits to compute the result.
+        result. Set `mpmath.mp.dps` to the desired number of decimal digits
+        before use.
         """
         return _compute_roots(self.weights, self.nodes, use_mp=use_mp)
 
@@ -248,8 +245,8 @@ class BarycentricRational:
         """Return the zeros of the rational function.
 
         If ``use_mp`` is ``True``, uses the ``mpmath`` package to compute the
-        result using 100-digit precision arithmetic. If an integer is passed,
-        uses that number of digits to compute the result.
+        result. Set `mpmath.mp.dps` to the desired number of decimal digits
+        before use.
         """
         if use_mp:
             return _compute_roots(self.weights*self.values, self.nodes,
