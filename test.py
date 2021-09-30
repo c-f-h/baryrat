@@ -45,10 +45,20 @@ def test_reproduction():
     assert np.allclose(f(nodes), r(nodes))
     z = np.linspace(0, 1, 100)
     assert np.allclose(f(z), r(z))
+
     pol, res = r.polres()
     assert np.allclose(sorted(p), sorted(pol))
+    ratfun = sum(res[j] / (z - pol[j]) for j in range(len(pol)))
+    bias = ratfun - f(z)
+    assert np.allclose(bias, bias[0])   # should be constant
+
+    mp.dps = 100
     pol, res = r.polres(use_mp=True)
+    pol = np.real_if_close(np.array(pol, complex))
     assert np.allclose(sorted(p), sorted(pol))
+    ratfun = sum(res[j] / (z - pol[j]) for j in range(len(pol)))
+    bias = np.array(ratfun - f(z), complex)
+    assert np.allclose(bias, bias[0])   # should be constant
 
 def test_polres():
     Z = np.linspace(0.0, 1.0, 101)
@@ -81,6 +91,7 @@ def test_zeros():
     assert np.allclose(r(zer), 0.0)
 
     zer2 = r.zeros(use_mp=True)
+    zer2 = np.real_if_close(np.array(zer2, complex))
     assert np.allclose(sorted(zer), sorted(zer2))
 
 def test_reciprocal():
@@ -219,6 +230,7 @@ def test_interpolate_with_poles():
     assert np.allclose(sorted(pol), sorted(poles))
     pol1 = r.poles()
     pol2 = r.poles(use_mp=True)
+    pol2 = np.real_if_close(np.array(pol2, complex))
     assert np.allclose(sorted(pol1), sorted(poles))
     assert np.allclose(sorted(pol2), sorted(poles))
 
@@ -230,6 +242,7 @@ def test_interpolate_with_poles_mp():
     r = baryrat.interpolate_with_poles(Z, F, poles, use_mp=True)
     assert np.array_equal(r(Z), F)
     pol, res = r.polres(use_mp=True)
+    pol = np.real_if_close(np.array(pol, complex))
     pol.sort()
     assert np.linalg.norm(pol - poles) < 1e-90
 

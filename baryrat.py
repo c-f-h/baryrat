@@ -30,17 +30,18 @@ def _compute_roots(w, x, use_mp):
         for i in range(M.rows):
             for j in range(M.cols):
                 M[i,j] -= ak[i]*bk[j]
-        lam = mp.eig(M, left=False, right=False)
-        lam = np.array(lam, dtype=complex)
+        lam = np.array(mp.eig(M, left=False, right=False))
+        # remove one simple root
+        lam = np.delete(lam, np.argmin(abs(lam)))
+        return lam
     else:
         # the same procedure in standard double precision
         ak = w / w.sum()
         M = np.diag(x) - np.outer(ak, x)
         lam = scipy.linalg.eigvals(M)
-
-    # remove one simple root
-    lam = np.delete(lam, np.argmin(abs(lam)))
-    return np.real_if_close(lam)
+        # remove one simple root
+        lam = np.delete(lam, np.argmin(abs(lam)))
+        return np.real_if_close(lam)
 
 def _mp_svd(A, full_matrices=True):
     """Convenience wrapper for mpmath high-precision SVD."""
@@ -216,8 +217,9 @@ class BarycentricRational:
     def polres(self, use_mp=False):
         """Return the poles and residues of the rational function.
 
-        The ``use_mp`` argument has the same meaning as for :meth:`poles` and
-        is only used during computation of the poles.
+        If ``use_mp`` is ``True``, uses the ``mpmath`` package to compute the
+        result. Set `mpmath.mp.dps` to the desired number of decimal digits
+        before use.
         """
         zj,fj,wj = self.nodes, self.values, self.weights
         m = len(wj)
