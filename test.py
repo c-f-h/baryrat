@@ -315,3 +315,29 @@ def test_brasil_deg():
     assert info.deviation <= 1e-8
     assert info.error <= 8e-5
     assert(len(info.errors) == info.iterations + 1)
+
+def test_jacobians():
+    Z = np.linspace(1, 5, 7)
+    r = baryrat.interpolate_rat(Z, np.sin(Z))
+    x = np.linspace(2, 4, 3)
+    Dz, Df, Dw = r.jacobians(x)
+    delta = 1e-6
+    # compare to finite differences
+    for k in range(len(r.nodes)):
+        z_delta = r.nodes.copy()
+        z_delta[k] += delta
+        r_delta = baryrat.BarycentricRational(z_delta, r.values, r.weights)
+        deriv = (r_delta(x) - r(x)) / delta
+        assert np.allclose(Dz[:,k], deriv)
+
+        f_delta = r.values.copy()
+        f_delta[k] += delta
+        r_delta = baryrat.BarycentricRational(r.nodes, f_delta, r.weights)
+        deriv = (r_delta(x) - r(x)) / delta
+        assert np.allclose(Df[:,k], deriv)
+
+        w_delta = r.weights.copy()
+        w_delta[k] += delta
+        r_delta = baryrat.BarycentricRational(r.nodes, r.values, w_delta)
+        deriv = (r_delta(x) - r(x)) / delta
+        assert np.allclose(Dw[:,k], deriv)

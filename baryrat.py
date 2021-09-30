@@ -7,6 +7,14 @@ import math
 
 __version__ = '1.4.0'
 
+def _q(z, f, w, x):
+    """Function which can compute the 'upper' or 'lower' rational function
+    in a barycentric rational function.
+
+    `x` may be a number or a column vector.
+    """
+    return np.sum((f * w) / (x - z), axis=-1)
+
 def _compute_roots(w, x, use_mp):
     # Cf.:
     # Knockaert, L. (2008). A simple and accurate algorithm for barycentric
@@ -166,6 +174,30 @@ class BarycentricRational:
             else:
                 raise NotImplementedError('derivatives higher than 2 not implemented')
             return BarycentricRational(self.nodes, dd, self.weights)(x) * math.factorial(k)
+
+    def jacobians(self, x):
+        """Compute the Jacobians of `r(x)`, where `x` may be a vector of
+        evaluation points, with respect to the node, value, and weight vectors.
+
+        The evaluation points `x` may not lie on any of the barycentric nodes
+        (unimplemented).
+
+        Returns:
+            A triple of arrays with as many rows as `x` has entries and as many
+            columns as the barycentric function has nodes, representing the
+            Jacobians with respect to :attr:`self.nodes`, :attr:`self.values`,
+            and :attr:`self.weights`, respectively.
+        """
+        z, f, w = self.nodes, self.values, self.weights
+        N1 = len(z)
+        x_c = np.atleast_2d(x).T      # column vector
+        dr_z = np.column_stack([_q(z, w[j] * (f[j] - f), w, x_c) / ((x - z[j]) * _q(z, 1, w, x_c))**2
+                      for j in range(N1)])
+        dr_f = np.column_stack([w[j] / ((x - z[j]) * _q(z, 1, w, x_c))
+                      for j in range(N1)])
+        dr_w = np.column_stack([_q(z, f[j] - f, w, x_c) / ((x - z[j]) * _q(z, 1, w, x_c)**2)
+                      for j in range(N1)])
+        return dr_z, dr_f, dr_w
 
     @property
     def order(self):
