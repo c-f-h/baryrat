@@ -189,13 +189,16 @@ class BarycentricRational:
         z, f, w = self.nodes, self.values, self.weights
         N1 = len(z)
         x_c = np.atleast_2d(x).T      # column vector
-        dr_z = np.column_stack([_q(z, w[j] * (f[j] - f), w, x_c) / ((x - z[j]) * _q(z, 1, w, x_c))**2
-                      for j in range(N1)])
-        dr_f = np.column_stack([w[j] / ((x - z[j]) * _q(z, 1, w, x_c))
-                      for j in range(N1)])
-        dr_w = np.column_stack([_q(z, f[j] - f, w, x_c) / ((x - z[j]) * _q(z, 1, w, x_c)**2)
-                      for j in range(N1)])
-        return dr_z, dr_f, dr_w
+        dr_z, dr_f, dr_w = [], [], []
+        qz1 = _q(z, 1, w, x_c)
+        # build matrices columnwise (j = node index)
+        for j in range(N1):
+            f_diff = np.subtract(f[j], f)
+            x_minus_zj = np.subtract(x, z[j])
+            dr_z.append(_q(z, f_diff * w[j], w, x_c) / (x_minus_zj * qz1)**2)
+            dr_f.append(np.divide(w[j], (x_minus_zj * qz1)))
+            dr_w.append(_q(z, f_diff, w, x_c) / (x_minus_zj * qz1**2))
+        return np.column_stack(dr_z), np.column_stack(dr_f), np.column_stack(dr_w)
 
     @property
     def order(self):
