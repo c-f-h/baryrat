@@ -96,18 +96,22 @@ class BarycentricRational:
         zj,fj,wj = self.nodes, self.values, self.weights
 
         xv = np.asanyarray(x).ravel()
+        if len(xv) == 0:
+            return np.empty(np.shape(x), dtype=xv.dtype)
         D = xv[:,None] - zj[None,:]
         # find indices where x is exactly on a node
         (node_xi, node_zi) = np.nonzero(D == 0)
 
+        one = xv[0] * 0 + 1     # for proper dtype when using mpmath
+
         with np.errstate(divide='ignore', invalid='ignore'):
             if len(node_xi) == 0:       # no zero divisors
-                C = 1.0 / D
+                C = np.divide(one, D)
                 r = C.dot(wj * fj) / C.dot(wj)
             else:
                 # set divisor to 1 to avoid division by zero
-                D[node_xi, node_zi] = 1
-                C = 1.0 / D
+                D[node_xi, node_zi] = one
+                C = np.divide(one, D)
                 r = C.dot(wj * fj) / C.dot(wj)
                 # fix evaluation at nodes to corresponding fj
                 # TODO: this is only correct if wj != 0
