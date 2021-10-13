@@ -759,6 +759,15 @@ def local_maxima_sample(g, nodes, N):
     nn = np.arange(Z.shape[0])
     return Z[nn, maxk], vals[nn, maxk]
 
+def chebyshev_nodes(num_nodes, interval=(-1.0, 1.0)):
+    """Compute `num_nodes` Chebyshev nodes of the first kind in the given interval."""
+    # compute nodes in (-1, 1)
+    nodes = (1 - np.cos((2*np.arange(1, num_nodes + 1) - 1) / (2*num_nodes) * np.pi))
+    # rescale to desired interval
+    a, b = interval
+    return nodes * ((b - a) / 2) + a
+
+
 def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
         step_factor=0.1, npi=100, init_steps=100, info=False):
     """Best Rational Approximation by Successive Interval Length adjustment.
@@ -823,7 +832,7 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
     stepsize = np.nan
 
     # start with Chebyshev nodes
-    nodes = (1 - np.cos((2*np.arange(1,nn+1) - 1) / (2*nn) * np.pi)) / 2 * (b - a) + a
+    nodes = chebyshev_nodes(nn, (a, b))
 
     # choose proper interpolation routine
     if n == 0:

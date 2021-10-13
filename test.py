@@ -290,6 +290,14 @@ def test_deriv():
     assert np.allclose(r.eval_deriv(X), df(X))
     assert np.allclose(r.eval_deriv(X, k=2), d2f(X))
 
+def test_chebnodes():
+    n = 7
+    nodes = baryrat.chebyshev_nodes(n, (0, 4))
+    nodes = (nodes / 2 - 1)     # scale back to (-1,1)
+    import scipy.special
+    values = scipy.special.eval_chebyt(7, nodes)
+    assert abs(values).max() < 1e-14
+
 def test_brasil():
     r, info = baryrat.brasil(np.sqrt, [0,1], 10, tol=1e-5, info=True)
     assert info.converged
