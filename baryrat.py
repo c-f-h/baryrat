@@ -769,7 +769,7 @@ def chebyshev_nodes(num_nodes, interval=(-1.0, 1.0)):
 
 
 def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
-        step_factor=0.1, npi=100, init_steps=100, info=False):
+        step_factor=0.1, npi=-30, init_steps=100, info=False):
     """Best Rational Approximation by Successive Interval Length adjustment.
 
     Computes best rational or polynomial approximations in the maximum norm by
