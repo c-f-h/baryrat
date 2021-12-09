@@ -5,6 +5,13 @@ import numpy as np
 import scipy.linalg
 import math
 
+try:
+    import mpmath
+except ImportError:
+    mpmath = None
+else:
+    from mpmath import mp, mpf
+
 __version__ = '1.4.0'
 
 def _q(z, f, w, x):
@@ -20,8 +27,7 @@ def _compute_roots(w, x, use_mp):
     # Knockaert, L. (2008). A simple and accurate algorithm for barycentric
     # rational interpolation. IEEE Signal processing letters, 15, 154-157.
     if use_mp:
-        from mpmath import mp
-
+        assert mpmath, 'mpmath package is not installed'
         ak = mp.matrix(w)
         ak /= sum(ak)
         bk = mp.matrix(x)
@@ -45,14 +51,14 @@ def _compute_roots(w, x, use_mp):
 
 def _mp_svd(A, full_matrices=True):
     """Convenience wrapper for mpmath high-precision SVD."""
-    from mpmath import mp
+    assert mpmath, 'mpmath package is not installed'
     AA = mp.matrix(A.tolist())
     U, Sigma, VT = mp.svd(AA, full_matrices=full_matrices)
     return np.array(U.tolist()), np.array(Sigma.tolist()).ravel(), np.array(VT.tolist())
 
 def _mp_qr(A):
     """Convenience wrapper for mpmath high-precision QR decomposition."""
-    from mpmath import mp
+    assert mpmath, 'mpmath package is not installed'
     AA = mp.matrix(A.tolist())
     Q, R = mp.qr(AA, mode='full')
     return np.array(Q.tolist()), np.array(R.tolist())
@@ -63,7 +69,7 @@ def _nullspace_vector(A, use_mp=False):
         result = np.zeros(A.shape[1])
         result[0] = 1.0
         if use_mp:
-            from mpmath import mpf
+            assert mpmath, 'mpmath package is not installed'
             result = np.vectorize(mpf)(result)
         return result
 
