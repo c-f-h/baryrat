@@ -12,7 +12,7 @@ except ImportError:
 else:
     from mpmath import mp, mpf
 
-__version__ = '1.4.0'
+__version__ = '2.0.0'
 
 def _is_mp_array(x):
     """Checks whether `x` is an ndarray containing mpmath extended precision numbers."""
