@@ -1,4 +1,4 @@
-# Barycentric rational approximation [![Build Status](https://github.com/c-f-h/baryrat/actions/workflows/python-package.yml/badge.svg)](https://github.com/c-f-h/baryrat/actions/workflows/python-package.yml)
+# Barycentric rational approximation [![Build Status](https://github.com/c-f-h/baryrat/actions/workflows/python-package.yml/badge.svg)](https://github.com/c-f-h/baryrat/actions/workflows/python-package.yml) [![PyPI version](https://badge.fury.io/py/baryrat.svg)](https://badge.fury.io/py/baryrat)
 
 This is a pure Python package which provides routines for rational and
 polynomial approximation through the so-called barycentric representation.
