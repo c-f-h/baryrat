@@ -53,7 +53,7 @@ Floater-Hormann interpolation, and more.
 
 ### Extended precision arithmetic
 
-Many functions in the package optionally support computing in extended precision
+From ``baryrat`` 2.0 forward, most functions in the package support computing in extended precision
 using the [`mpmath`](https://mpmath.org/) package. To use this option, first
 set the desired number of decimal digits to compute with
 
@@ -62,12 +62,18 @@ from mpmath import mp
 mp.dps = 100      # compute using 100-digit precision
 ```
 
-and then pass the `use_mp=True` flag to any function that supports it.
-Instances of `BarycentricRational` support having their node, value and weight
-vectors stored in extended precision. Many functions, such as those for
-computing the poles of a rational function, will return arrays of extended
-precision numbers (using the object mode of numpy arrays) rather than
-standard floating point arrays in this mode.
+Arrays of numbers should be represented as numpy arrays with the object datatype.
+Don't use the ``mpmath`` matrix feature! For instance, use
+`np.array(mp.linspace(0, 1, 100))` to create equispaced points in extended precision.
+
+Most functions will autodetect if you pass such extended precision arrays and
+use the corresponding extended precision arithmetic in that case. There is
+also a `use_mp` flag for many functions, but it is only required to force
+the use of extended precision even when the inputs are in double precision.
+
+Also the `BarycentricRational` class supports having its nodes, values, and
+weights stored in extended precision and will operate accordingly, for instance
+when computing the poles.
 
 ## Installation
 
