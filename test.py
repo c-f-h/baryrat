@@ -144,14 +144,14 @@ def test_interpolate_rat_mp():
     def f(x):
         return (x + 3) / ((x + 1) * (x + 2))
     Z = mp_linspace(0, 1, 5)
-    r = baryrat.interpolate_rat(Z, f(Z), use_mp=True)
+    r = baryrat.interpolate_rat(Z, f(Z))
     assert np.linalg.norm(f(X) - r(X)) < 1e-90
     assert r.order == 2
     ##
     def f(x):
         return (x * (x + 1) * (x + 2)) / (x + 3)
     Z = mp_linspace(0, 1, 7)
-    r = baryrat.interpolate_rat(Z, f(Z), use_mp=True)
+    r = baryrat.interpolate_rat(Z, f(Z))
     assert np.linalg.norm(f(X) - r(X)) < 1e-90
     assert r.order == 3
 
@@ -162,7 +162,7 @@ def test_interpolate_with_degree_mp():
     def f(x):
         return (x + 3) / ((x + 1) * (x + 2))
     Z = mp_linspace(0, 1, 4)
-    r = baryrat.interpolate_with_degree(Z, f(Z), (1, 2), use_mp=True)
+    r = baryrat.interpolate_with_degree(Z, f(Z), (1, 2))
     assert np.linalg.norm(f(X) - r(X)) < 1e-90
     assert r.order == 2
     assert r.degree() == (1, 2)
@@ -170,7 +170,7 @@ def test_interpolate_with_degree_mp():
     def f(x):
         return (x * (x + 1) * (x + 2)) / (x + 3)
     Z = mp_linspace(0, 1, 5)
-    r = baryrat.interpolate_with_degree(Z, f(Z), (3, 1), use_mp=True)
+    r = baryrat.interpolate_with_degree(Z, f(Z), (3, 1))
     assert np.linalg.norm(f(X) - r(X)) < 1e-90
     assert r.order == 3
     assert r.degree() == (3, 1)
@@ -239,9 +239,10 @@ def test_interpolate_with_poles_mp():
     Z = mp_linspace(1.0, 4.0, 4)
     F = np.vectorize(mp.sin)(Z)
     poles = [-3, -2, -1]
-    r = baryrat.interpolate_with_poles(Z, F, poles, use_mp=True)
+    r = baryrat.interpolate_with_poles(Z, F, poles)
+    assert r.uses_mp()
     assert np.array_equal(r(Z), F)
-    pol, res = r.polres(use_mp=True)
+    pol, res = r.polres()
     pol = np.real_if_close(np.array(pol, complex))
     pol.sort()
     assert np.linalg.norm(pol - poles) < 1e-90

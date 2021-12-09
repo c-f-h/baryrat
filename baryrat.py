@@ -14,6 +14,13 @@ else:
 
 __version__ = '1.4.0'
 
+def _is_mp_array(x):
+    """Checks whether `x` is an ndarray containing mpmath extended precision numbers."""
+    return (mpmath
+            and x.dtype == 'O'
+            and len(x) > 0
+            and isinstance(x.flat[0], mpf))
+
 def _q(z, f, w, x):
     """Function which can compute the 'upper' or 'lower' rational function
     in a barycentric rational function.
@@ -26,6 +33,9 @@ def _compute_roots(w, x, use_mp):
     # Cf.:
     # Knockaert, L. (2008). A simple and accurate algorithm for barycentric
     # rational interpolation. IEEE Signal processing letters, 15, 154-157.
+    if _is_mp_array(w) or _is_mp_array(x):
+        use_mp = True
+
     if use_mp:
         assert mpmath, 'mpmath package is not installed'
         ak = mp.matrix(w)
@@ -64,6 +74,9 @@ def _mp_qr(A):
     return np.array(Q.tolist()), np.array(R.tolist())
 
 def _nullspace_vector(A, use_mp=False):
+    if _is_mp_array(A):
+        use_mp = True
+
     if A.shape[0] == 0:
         # some LAPACK implementations have trouble with size 0 matrices
         result = np.zeros(A.shape[1])
@@ -128,6 +141,12 @@ class BarycentricRational:
         else:
             r.shape = np.shape(x)
             return r
+
+    def uses_mp(self):
+        """Checks whether any of the data of this rational function uses
+        ``mpmath`` extended precision.
+        """
+        return _is_mp_array(self.nodes) or _is_mp_array(self.values) or _is_mp_array(self.weights)
 
     def eval_deriv(self, x, k=1):
         """Evaluate the `k`-th derivative of this rational function at a scalar
@@ -232,10 +251,14 @@ class BarycentricRational:
 
         If ``use_mp`` is ``True``, uses the ``mpmath`` package to compute the
         result. Set `mpmath.mp.dps` to the desired number of decimal digits
-        before use.
+        before use. The ``use_mp`` option will be automatically enabled if
+        :meth:`uses_mp` is True.
         """
         zj,fj,wj = self.nodes, self.values, self.weights
         m = len(wj)
+
+        if self.uses_mp():
+            use_mp = True
 
         # compute poles
         if use_mp:
@@ -261,8 +284,12 @@ class BarycentricRational:
 
         If ``use_mp`` is ``True``, uses the ``mpmath`` package to compute the
         result. Set `mpmath.mp.dps` to the desired number of decimal digits
-        before use.
+        before use. The ``use_mp`` option will be automatically enabled if
+        :meth:`uses_mp` is True.
         """
+        if self.uses_mp():
+            use_mp = True
+
         if use_mp:
             return _compute_roots(self.weights*self.values, self.nodes,
                     use_mp=use_mp)
@@ -442,7 +469,8 @@ def interpolate_rat(nodes, values, use_mp=False):
         nodes (array): the interpolation nodes; must have odd length and
             be passed in strictly increasing or decreasing order
         values (array): the values at the interpolation nodes
-        use_mp (bool): whether to use ``mpmath`` for extended precision
+        use_mp (bool): whether to use ``mpmath`` for extended precision. Is
+            automatically enabled if `nodes` or `values` use ``mpmath``.
 
     Returns:
         BarycentricRational: the rational interpolant. If there are `2n + 1` nodes,
@@ -508,7 +536,8 @@ def interpolate_with_degree(nodes, values, deg, use_mp=False):
         values (array): the values at the interpolation nodes
         deg: a pair `(m, n)` of the degrees of the interpolating rational
             function. The number of interpolation nodes must be `m + n + 1`.
-        use_mp (bool): whether to use ``mpmath`` for extended precision
+        use_mp (bool): whether to use ``mpmath`` for extended precision. Is
+            automatically enabled if `nodes` or `values` use ``mpmath``.
 
     Returns:
         BarycentricRational: the rational interpolant
