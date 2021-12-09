@@ -814,8 +814,9 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
         https://doi.org/10.1007/s11075-020-01042-0
 
     Arguments:
-        f: the scalar function to be approximated
-        interval: the bounds (a, b) of the approximation interval
+        f: the scalar function to be approximated. Must be able to operate
+            on arrays of arguments.
+        interval: the bounds `(a, b)` of the approximation interval
         deg: the degree of the numerator `m` and denominator `n` of the
             rational approximation; either an integer (`m=n`) or a pair `(m, n)`.
             If `n = 0`, a polynomial best approximation is computed.
@@ -851,6 +852,13 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
     Additional information about the resulting rational function, such as poles,
     residues and zeroes, can be queried from the :class:`BarycentricRational` object
     itself.
+
+    Note:
+        This function supports ``mpmath`` for extended precision. To enable
+        this, specify the interval `(a, b)` as `mpf` numbers, e.g.,
+        ``interval=(mpf(0), mpf(1))``. Also make sure that the function `f`
+        consumes and outputs arrays of `mpf` numbers; the Numpy function
+        :func:`numpy.vectorize` may help with this.
     """
     a, b = interval
     assert a < b, 'Invalid interval'
