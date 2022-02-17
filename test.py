@@ -154,6 +154,17 @@ def test_interpolate_rat_mp():
     r = baryrat.interpolate_rat(Z, f(Z))
     assert np.linalg.norm(f(X) - r(X)) < 1e-90
     assert r.order == 3
+    ## test complex case
+    n = 9
+    Z = np.array([np.exp(2j * k / n * np.pi) for k in range(0, n)])
+    r = baryrat.interpolate_rat(Z, np.exp(Z), use_mp=True)
+    X = 1j * mp_linspace(-1, 1, 100)
+    assert abs(np.vectorize(mp.exp)(X) - r(X)).max() < 1e-7
+    ## same thing with Z already in mpc form
+    Z = np.array([mp.exp(2j * k / n * np.pi) for k in range(0, n)])
+    r = baryrat.interpolate_rat(Z, np.vectorize(mp.exp)(Z))
+    X = 1j * mp_linspace(-1, 1, 100)
+    assert abs(np.vectorize(mp.exp)(X) - r(X)).max() < 1e-7
 
 def test_interpolate_with_degree_mp():
     mp.dps = 100

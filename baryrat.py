@@ -10,7 +10,7 @@ try:
 except ImportError:
     mpmath = None
 else:
-    from mpmath import mp, mpf
+    from mpmath import mp, mpf, mpc
 
 __version__ = '2.0.0'
 
@@ -19,7 +19,7 @@ def _is_mp_array(x):
     return (mpmath
             and x.dtype == 'O'
             and len(x) > 0
-            and isinstance(x.flat[0], mpf))
+            and (isinstance(x.flat[0], mpf) or isinstance(x.flat[0], mpc)))
 
 def _q(z, f, w, x):
     """Function which can compute the 'upper' or 'lower' rational function
