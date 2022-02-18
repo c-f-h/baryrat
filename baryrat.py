@@ -294,6 +294,11 @@ class BarycentricRational:
             return _compute_roots(self.weights*self.values, self.nodes,
                     use_mp=use_mp)
         else:
+            # computation of poles by companion matrix pair; see, e.g.:
+            #   Fast Reduction of Generalized Companion Matrix Pairs for
+            #   Barycentric Lagrange Interpolants,
+            #   Piers W. Lawrence, SIAM J. Matrix Anal. Appl., 2013
+            #   https://doi.org/10.1137/130904508
             zj,fj,wj = self.nodes, self.values, self.weights
             B = np.eye(len(wj) + 1)
             B[0,0] = 0
