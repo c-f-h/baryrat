@@ -581,10 +581,11 @@ def interpolate_with_degree(nodes, values, deg, use_mp=False):
 
 def _polynomial_weights(x):
     n = len(x)
-    return np.array([
+    w = np.array([
             1.0 / np.prod([x[i] - x[j] for j in range(n) if j != i])
             for i in range(n)
     ])
+    return w / np.abs(w).max()
 
 def interpolate_poly(nodes, values):
     """Compute the interpolating polynomial for the given nodes and values in
