@@ -33,6 +33,9 @@ def _compute_roots(w, x, use_mp):
     # Cf.:
     # Knockaert, L. (2008). A simple and accurate algorithm for barycentric
     # rational interpolation. IEEE Signal processing letters, 15, 154-157.
+    #
+    # This version requires solving only a standard eigenvalue problem, but
+    # has troubles when the polynomial has leading 0 coefficients.
     if _is_mp_array(w) or _is_mp_array(x):
         use_mp = True
 
@@ -58,6 +61,23 @@ def _compute_roots(w, x, use_mp):
         # remove one simple root
         lam = np.delete(lam, np.argmin(abs(lam)))
         return np.real_if_close(lam)
+
+def _compute_roots2(z, f, w):
+    # computation of roots/poles by companion matrix pair; see, e.g.:
+    #   Fast Reduction of Generalized Companion Matrix Pairs for
+    #   Barycentric Lagrange Interpolants,
+    #   Piers W. Lawrence, SIAM J. Matrix Anal. Appl., 2013
+    #   https://doi.org/10.1137/130904508
+    #
+    # This version can deal with leading 0 coefficients of the polynomial, but
+    # requires solving a generalized eigenvalue problem, which is currently not
+    # supported in mpmath.
+    B = np.eye(len(w) + 1)
+    B[0,0] = 0
+    E = np.block([[0, w],
+                  [f[:,None], np.diag(z)]])
+    evals = scipy.linalg.eigvals(E, B)
+    return np.real_if_close(evals[np.isfinite(evals)])
 
 def _mp_svd(A, full_matrices=True):
     """Convenience wrapper for mpmath high-precision SVD."""
@@ -244,7 +264,10 @@ class BarycentricRational:
         result. Set `mpmath.mp.dps` to the desired number of decimal digits
         before use.
         """
-        return _compute_roots(self.weights, self.nodes, use_mp=use_mp)
+        if use_mp or self.uses_mp():
+            return _compute_roots(self.weights, self.nodes, use_mp=True)
+        else:
+            return _compute_roots2(self.nodes, np.ones_like(self.values), self.weights)
 
     def polres(self, use_mp=False):
         """Return the poles and residues of the rational function.
@@ -261,15 +284,7 @@ class BarycentricRational:
             use_mp = True
 
         # compute poles
-        if use_mp:
-            pol = self.poles(use_mp=use_mp)
-        else:
-            B = np.eye(m+1)
-            B[0,0] = 0
-            E = np.block([[0, wj],
-                          [np.ones((m,1)), np.diag(zj)]])
-            evals = scipy.linalg.eigvals(E, B)
-            pol = np.real_if_close(evals[np.isfinite(evals)])
+        pol = self.poles(use_mp=use_mp)
 
         # compute residues via formula for simple poles of quotients of analytic functions
         C_pol = 1.0 / (pol[:,None] - zj[None,:])
@@ -287,25 +302,11 @@ class BarycentricRational:
         before use. The ``use_mp`` option will be automatically enabled if
         :meth:`uses_mp` is True.
         """
-        if self.uses_mp():
-            use_mp = True
-
-        if use_mp:
+        if use_mp or self.uses_mp():
             return _compute_roots(self.weights*self.values, self.nodes,
-                    use_mp=use_mp)
+                    use_mp=True)
         else:
-            # computation of poles by companion matrix pair; see, e.g.:
-            #   Fast Reduction of Generalized Companion Matrix Pairs for
-            #   Barycentric Lagrange Interpolants,
-            #   Piers W. Lawrence, SIAM J. Matrix Anal. Appl., 2013
-            #   https://doi.org/10.1137/130904508
-            zj,fj,wj = self.nodes, self.values, self.weights
-            B = np.eye(len(wj) + 1)
-            B[0,0] = 0
-            E = np.block([[0, wj],
-                          [fj[:,None], np.diag(zj)]])
-            evals = scipy.linalg.eigvals(E, B)
-            return np.real_if_close(evals[np.isfinite(evals)])
+            return _compute_roots2(self.nodes, self.values, self.weights)
 
     def gain(self):
         """The gain in a poles-zeros-gain representation of the rational function,
