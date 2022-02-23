@@ -1,7 +1,7 @@
 # Barycentric rational approximation [![Build Status](https://github.com/c-f-h/baryrat/actions/workflows/python-package.yml/badge.svg)](https://github.com/c-f-h/baryrat/actions/workflows/python-package.yml) [![PyPI version](https://badge.fury.io/py/baryrat.svg)](https://badge.fury.io/py/baryrat)
 
 This is a pure Python package which provides routines for rational and
-polynomial approximation through the so-called barycentric representation.
+polynomial approximation for real and complex functions through the so-called barycentric representation.
 The advantage of this representation is (often significantly) improved
 stability over classical approaches.
 
@@ -131,6 +131,37 @@ r.nodes
 r.values
 r.weights
 ```
+
+### Example: approximating the complex exponential
+
+```python
+# create 9 interpolation nodes in a circle
+n = 9
+nodes = exp(arange(n) / n * 2j * pi)
+
+# interpolate the complex exp function as a degree (4,4) rational function
+r = baryrat.interpolate_rat(nodes, exp(nodes))
+# compute poles and zeros
+poles, zer = r.poles(), r.zeros()
+
+# plot the approximation error and the nodes, poles and zeros
+figsize(13.5, 5)
+
+subplot(1, 2, 1)
+Y, X = ogrid[-2:2:100j, -2:2:100j]
+Z = X + 1j * Y
+pcolormesh(X.flat, Y.flat, abs(r(Z) - exp(Z)), norm=mpl.colors.LogNorm())
+colorbar();
+axis('equal');
+
+subplot(1, 2, 2)
+scatter(real(nodes), imag(nodes))
+scatter(real(poles), imag(poles), marker='x', c='r')
+scatter(real(zer), imag(zer), marker='.', c='g')
+axis('equal');
+```
+![Example](https://user-images.githubusercontent.com/5740732/155346399-c4349452-c2df-4ac7-9a9b-134b6b00228b.png)
+
 
 ## Citing ``baryrat``
 
