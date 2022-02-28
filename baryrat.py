@@ -6,20 +6,22 @@ import scipy.linalg
 import math
 
 try:
-    import mpmath
+    import gmpy2
+    import flamp
 except ImportError:
-    mpmath = None
+    gmpy2 = None
+    flamp = None
 else:
-    from mpmath import mp, mpf, mpc
+    from gmpy2 import mpfr, mpc
 
 __version__ = '2.0.0'
 
 def _is_mp_array(x):
-    """Checks whether `x` is an ndarray containing mpmath extended precision numbers."""
-    return (mpmath
+    """Checks whether `x` is an ndarray containing gmpy2 extended precision numbers."""
+    return (gmpy2
             and x.dtype == 'O'
             and len(x) > 0
-            and (isinstance(x.flat[0], mpf) or isinstance(x.flat[0], mpc)))
+            and (isinstance(x.flat[0], mpfr) or isinstance(x.flat[0], mpc)))
 
 def _q(z, f, w, x):
     """Function which can compute the 'upper' or 'lower' rational function
@@ -40,16 +42,12 @@ def _compute_roots(w, x, use_mp):
         use_mp = True
 
     if use_mp:
-        assert mpmath, 'mpmath package is not installed'
-        ak = mp.matrix(w)
+        assert flamp, 'flamp package is not installed'
+        ak = flamp.to_mp(w)     # TODO: this always copies!
+        bk = flamp.to_mp(x)     # TODO: ditto
         ak /= sum(ak)
-        bk = mp.matrix(x)
-
-        M = mp.diag(bk)
-        for i in range(M.rows):
-            for j in range(M.cols):
-                M[i,j] -= ak[i]*bk[j]
-        lam = np.array(mp.eig(M, left=False, right=False))
+        M = np.diag(bk) - np.outer(ak, x)
+        lam = flamp.eig(M, left=False, right=False)
         # remove one simple root
         lam = np.delete(lam, np.argmin(abs(lam)))
         return lam
@@ -80,18 +78,14 @@ def _compute_roots2(z, f, w):
     return np.real_if_close(evals[np.isfinite(evals)])
 
 def _mp_svd(A, full_matrices=True):
-    """Convenience wrapper for mpmath high-precision SVD."""
-    assert mpmath, 'mpmath package is not installed'
-    AA = mp.matrix(A.tolist())
-    U, Sigma, VT = mp.svd(AA, full_matrices=full_matrices)
-    return np.array(U.tolist()), np.array(Sigma.tolist()).ravel(), np.array(VT.tolist())
+    """Convenience wrapper for high-precision SVD."""
+    assert flamp, 'flamp package is not installed'
+    return flamp.svd(AA, full_matrices=full_matrices)
 
 def _mp_qr(A):
-    """Convenience wrapper for mpmath high-precision QR decomposition."""
-    assert mpmath, 'mpmath package is not installed'
-    AA = mp.matrix(A.tolist())
-    Q, R = mp.qr(AA, mode='full')
-    return np.array(Q.tolist()), np.array(R.tolist())
+    """Convenience wrapper for high-precision QR decomposition."""
+    assert flamp, 'flamp package is not installed'
+    return flamp.qr(A, mode='full')
 
 def _nullspace_vector(A, use_mp=False):
     if _is_mp_array(A):
@@ -102,8 +96,8 @@ def _nullspace_vector(A, use_mp=False):
         result = np.zeros(A.shape[1])
         result[0] = 1.0
         if use_mp:
-            assert mpmath, 'mpmath package is not installed'
-            result = np.vectorize(mpf)(result)
+            assert flamp, 'flamp package is not installed'
+            result = flamp.to_mp(result)
         return result
 
     if use_mp:
@@ -141,7 +135,7 @@ class BarycentricRational:
         # find indices where x is exactly on a node
         (node_xi, node_zi) = np.nonzero(D == 0)
 
-        one = xv[0] * 0 + 1     # for proper dtype when using mpmath
+        one = xv[0] * 0 + 1     # for proper dtype when using MP
 
         with np.errstate(divide='ignore', invalid='ignore'):
             if len(node_xi) == 0:       # no zero divisors
@@ -164,7 +158,7 @@ class BarycentricRational:
 
     def uses_mp(self):
         """Checks whether any of the data of this rational function uses
-        ``mpmath`` extended precision.
+        extended precision.
         """
         return _is_mp_array(self.nodes) or _is_mp_array(self.values) or _is_mp_array(self.weights)
 
@@ -475,8 +469,8 @@ def interpolate_rat(nodes, values, use_mp=False):
         nodes (array): the interpolation nodes; must have odd length and
             be passed in strictly increasing or decreasing order
         values (array): the values at the interpolation nodes
-        use_mp (bool): whether to use ``mpmath`` for extended precision. Is
-            automatically enabled if `nodes` or `values` use ``mpmath``.
+        use_mp (bool): whether to use ``gmpy2`` for extended precision. Is
+            automatically enabled if `nodes` or `values` use ``gmpy2``.
 
     Returns:
         BarycentricRational: the rational interpolant. If there are `2n + 1` nodes,
@@ -522,14 +516,18 @@ def _defect_matrix_arnoldi(x, m, f=None):
     if m == 0:
         return np.empty((0, len(x)), dtype=x.dtype)
     if f is None:
-        f = 0 * x + 1
-    f = f / np.linalg.norm(f)
+        f = 0 * x + 1       # has the proper dtype when using MP
+    if f.dtype == 'O' or x.dtype == 'O':    # slight hack - mpfr has no sqrt() method!
+        norm = flamp.vector_norm
+    else:
+        norm = np.linalg.norm
+    f = f / norm(f)
     Q = [f]
     for k in range(1, m):
         q = Q[-1] * x
         for j in range(len(Q)):
             q -= Q[j] * np.inner(q, Q[j])
-        q /= np.linalg.norm(q)
+        q /= norm(q)
         Q.append(q)
     return np.array(Q)
 
@@ -542,8 +540,8 @@ def interpolate_with_degree(nodes, values, deg, use_mp=False):
         values (array): the values at the interpolation nodes
         deg: a pair `(m, n)` of the degrees of the interpolating rational
             function. The number of interpolation nodes must be `m + n + 1`.
-        use_mp (bool): whether to use ``mpmath`` for extended precision. Is
-            automatically enabled if `nodes` or `values` use ``mpmath``.
+        use_mp (bool): whether to use ``gmpy2`` for extended precision. Is
+            automatically enabled if `nodes` or `values` use ``gmpy2``.
 
     Returns:
         BarycentricRational: the rational interpolant
@@ -861,10 +859,10 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
     itself.
 
     Note:
-        This function supports ``mpmath`` for extended precision. To enable
-        this, specify the interval `(a, b)` as `mpf` numbers, e.g.,
-        ``interval=(mpf(0), mpf(1))``. Also make sure that the function `f`
-        consumes and outputs arrays of `mpf` numbers; the Numpy function
+        This function supports ``gmpy2`` for extended precision. To enable
+        this, specify the interval `(a, b)` as `mpfr` numbers, e.g.,
+        ``interval=(mpfr(0), mpfr(1))``. Also make sure that the function `f`
+        consumes and outputs arrays of `mpfr` numbers; the Numpy function
         :func:`numpy.vectorize` may help with this.
     """
     a, b = interval

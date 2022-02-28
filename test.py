@@ -1,7 +1,8 @@
 import numpy as np
 import baryrat
 import scipy.interpolate
-from mpmath import mp
+import flamp
+import gmpy2
 
 def test_init():
     nodes = [0, 1, 2]
@@ -52,7 +53,7 @@ def test_reproduction():
     bias = ratfun - f(z)
     assert np.allclose(bias, bias[0])   # should be constant
 
-    mp.dps = 100
+    flamp.set_dps(100)
     pol, res = r.polres(use_mp=True)
     pol = np.real_if_close(np.array(pol, complex))
     assert np.allclose(sorted(p), sorted(pol))
@@ -134,55 +135,52 @@ def test_interpolate_with_degree():
     assert r.order == 3
     assert r.degree() == (3, 1)
 
-def mp_linspace(a, b, n):
-    return np.array(mp.linspace(a, b, n))
-
 def test_interpolate_rat_mp():
-    mp.dps = 100
-    X = mp_linspace(0, 1, 100)
+    flamp.set_dps(100)
+    X = flamp.linspace(0, 1, 100)
     ##
     def f(x):
         return (x + 3) / ((x + 1) * (x + 2))
-    Z = mp_linspace(0, 1, 5)
+    Z = flamp.linspace(0, 1, 5)
     r = baryrat.interpolate_rat(Z, f(Z))
-    assert np.linalg.norm(f(X) - r(X)) < 1e-90
+    assert np.linalg.norm(f(X) - r(X), np.inf) < 1e-90
     assert r.order == 2
     ##
     def f(x):
         return (x * (x + 1) * (x + 2)) / (x + 3)
-    Z = mp_linspace(0, 1, 7)
+    Z = flamp.linspace(0, 1, 7)
     r = baryrat.interpolate_rat(Z, f(Z))
-    assert np.linalg.norm(f(X) - r(X)) < 1e-90
+    assert np.linalg.norm(f(X) - r(X), np.inf) < 1e-90
     assert r.order == 3
     ## test complex case
     n = 9
     Z = np.array([np.exp(2j * k / n * np.pi) for k in range(0, n)])
     r = baryrat.interpolate_rat(Z, np.exp(Z), use_mp=True)
-    X = 1j * mp_linspace(-1, 1, 100)
-    assert abs(np.vectorize(mp.exp)(X) - r(X)).max() < 1e-7
+    X = 1j * flamp.linspace(-1, 1, 100)
+    assert abs(flamp.exp(X) - r(X)).max() < 1e-7
     ## same thing with Z already in mpc form
-    Z = np.array([mp.exp(2j * k / n * np.pi) for k in range(0, n)])
-    r = baryrat.interpolate_rat(Z, np.vectorize(mp.exp)(Z))
-    X = 1j * mp_linspace(-1, 1, 100)
-    assert abs(np.vectorize(mp.exp)(X) - r(X)).max() < 1e-7
+    Z = flamp.exp(1j * flamp.linspace(0, 2 * np.pi, n, endpoint=False))
+    r = baryrat.interpolate_rat(Z, flamp.exp(Z))
+    X = 1j * flamp.linspace(-1, 1, 100)
+    assert abs(flamp.exp(X) - r(X)).max() < 1e-7
 
 def test_interpolate_with_degree_mp():
-    mp.dps = 100
-    X = mp_linspace(0, 1, 100)
+    flamp.set_dps(100)
+    X = flamp.linspace(0, 1, 100)
     ##
     def f(x):
         return (x + 3) / ((x + 1) * (x + 2))
-    Z = mp_linspace(0, 1, 4)
+    Z = flamp.linspace(0, 1, 4)
     r = baryrat.interpolate_with_degree(Z, f(Z), (1, 2))
-    assert np.linalg.norm(f(X) - r(X)) < 1e-90
+    assert np.linalg.norm(f(X) - r(X), np.inf) < 1e-90
     assert r.order == 2
     assert r.degree() == (1, 2)
     ##
     def f(x):
         return (x * (x + 1) * (x + 2)) / (x + 3)
-    Z = mp_linspace(0, 1, 5)
+    Z = flamp.linspace(0, 1, 5)
     r = baryrat.interpolate_with_degree(Z, f(Z), (3, 1))
-    assert np.linalg.norm(f(X) - r(X)) < 1e-90
+    assert np.linalg.norm(f(X) - r(X), np.inf) < 1e-90
     assert r.order == 3
     assert r.degree() == (3, 1)
 
@@ -246,9 +244,9 @@ def test_interpolate_with_poles():
     assert np.allclose(sorted(pol2), sorted(poles))
 
 def test_interpolate_with_poles_mp():
-    mp.dps = 100
-    Z = mp_linspace(1.0, 4.0, 4)
-    F = np.vectorize(mp.sin)(Z)
+    flamp.set_dps(100)
+    Z = flamp.linspace(1.0, 4.0, 4)
+    F = flamp.sin(Z)
     poles = [-3, -2, -1]
     r = baryrat.interpolate_with_poles(Z, F, poles)
     assert r.uses_mp()
