@@ -80,7 +80,7 @@ def _compute_roots2(z, f, w):
 def _mp_svd(A, full_matrices=True):
     """Convenience wrapper for high-precision SVD."""
     assert flamp, 'flamp package is not installed'
-    return flamp.svd(AA, full_matrices=full_matrices)
+    return flamp.svd(A, full_matrices=full_matrices)
 
 def _mp_qr(A):
     """Convenience wrapper for high-precision QR decomposition."""
