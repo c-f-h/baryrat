@@ -44,7 +44,7 @@ def _compute_roots(w, x, use_mp):
     if use_mp:
         assert flamp, 'flamp package is not installed'
         ak = flamp.to_mp(w)     # TODO: this always copies!
-        bk = flamp.to_mp(x)     # TODO: ditto
+        bk = flamp.to_mp(x)
         ak /= sum(ak)
         M = np.diag(bk) - np.outer(ak, x)
         lam = flamp.eig(M, left=False, right=False)
@@ -69,7 +69,7 @@ def _compute_roots2(z, f, w):
     #
     # This version can deal with leading 0 coefficients of the polynomial, but
     # requires solving a generalized eigenvalue problem, which is currently not
-    # supported in mpmath.
+    # supported in mpmath/flamp.
     B = np.eye(len(w) + 1)
     B[0,0] = 0
     E = np.block([[0, w],
@@ -254,9 +254,9 @@ class BarycentricRational:
     def poles(self, use_mp=False):
         """Return the poles of the rational function.
 
-        If ``use_mp`` is ``True``, uses the ``mpmath`` package to compute the
-        result. Set `mpmath.mp.dps` to the desired number of decimal digits
-        before use.
+        If ``use_mp`` is ``True``, uses the ``flamp`` multiple precision
+        package to compute the result. This option is automatically enabled if
+        :meth:`uses_mp` is True.
         """
         if use_mp or self.uses_mp():
             return _compute_roots(self.weights, self.nodes, use_mp=True)
@@ -266,9 +266,8 @@ class BarycentricRational:
     def polres(self, use_mp=False):
         """Return the poles and residues of the rational function.
 
-        If ``use_mp`` is ``True``, uses the ``mpmath`` package to compute the
-        result. Set `mpmath.mp.dps` to the desired number of decimal digits
-        before use. The ``use_mp`` option will be automatically enabled if
+        If ``use_mp`` is ``True``, uses the ``flamp`` multiple precision
+        package to compute the result. This option is automatically enabled if
         :meth:`uses_mp` is True.
         """
         zj,fj,wj = self.nodes, self.values, self.weights
@@ -291,9 +290,8 @@ class BarycentricRational:
     def zeros(self, use_mp=False):
         """Return the zeros of the rational function.
 
-        If ``use_mp`` is ``True``, uses the ``mpmath`` package to compute the
-        result. Set `mpmath.mp.dps` to the desired number of decimal digits
-        before use. The ``use_mp`` option will be automatically enabled if
+        If ``use_mp`` is ``True``, uses the ``flamp`` multiple precision
+        package to compute the result. This option is automatically enabled if
         :meth:`uses_mp` is True.
         """
         if use_mp or self.uses_mp():

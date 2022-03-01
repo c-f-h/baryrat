@@ -53,18 +53,28 @@ Floater-Hormann interpolation, and more.
 
 ### Extended precision arithmetic
 
-From ``baryrat`` 2.0 forward, most functions in the package support computing in extended precision
-using the [`mpmath`](https://mpmath.org/) package. To use this option, first
-set the desired number of decimal digits to compute with
+From ``baryrat`` 2.1 forward, most functions in the package support computing in extended precision
+using the [`gmpy2`](https://pypi.org/project/gmpy2/) package; linear algebra routines are provided
+through the [`flamp`](https://github.com/c-f-h/flamp) package.
+
+To enable this, first install the `flamp` package:
+
+    pip install flamp
+
+This will automatically install `gmpy2` as well if it is not yet installed.
+
+In your code, first set the desired number of decimal digits to compute with by
 
 ```python
-from mpmath import mp
-mp.dps = 100      # compute using 100-digit precision
+import flamp
+flamp.set_dps(100)  # compute with 100 decimal digits precision
 ```
 
-Arrays of numbers should be represented as numpy arrays with the object datatype.
-Don't use the ``mpmath`` matrix feature! For instance, use
-`np.array(mp.linspace(0, 1, 100))` to create equispaced points in extended precision.
+Arrays of numbers should be represented as numpy arrays with the object datatype
+containing `gmpy2` floating point numbers. Some convenience functions to create
+such arrays are provided in `flamp`.
+For instance, use `flamp.linspace(0, 1, 100)` to create equispaced points in
+extended precision.
 
 Most functions will autodetect if you pass such extended precision arrays and
 use the corresponding extended precision arithmetic in that case. There is
@@ -77,8 +87,9 @@ when computing the poles.
 
 ## Installation
 
-The implementation is in pure Python and requires only numpy and scipy as
-dependencies. Install it using pip:
+The package is implemented in pure Python and depends only on numpy and scipy,
+with gmpy2 and flamp as optional dependencies as discussed above.
+Install it using pip:
 
     pip install baryrat
 
