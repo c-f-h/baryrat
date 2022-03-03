@@ -383,16 +383,35 @@ def test_bpane():
     p, info = baryrat.bpane(f, f_deriv, interval, 11, info=True, verbose=0)
     assert info.error < 2.8e-2 and abs(info.lam) < 2.8e-2
     X = np.linspace(*interval, 100)
-    assert np.abs(f(X) - p(X)).max() < info.error * (1 + 1e-6)  # allow some tolerance
+    assert abs(f(X) - p(X)).max() < info.error * (1 + 1e-6)  # allow some tolerance
     assert info.iterations == 11
 
     # try with numerical derivative
     p, info = baryrat.bpane(f, None, interval, 11, info=True, verbose=0)
     assert info.error < 2.8e-2 and abs(info.lam) < 2.8e-2
-    X = np.linspace(*interval, 100)
-    assert np.abs(f(X) - p(X)).max() < info.error * (1 + 1e-6)  # allow some tolerance
     assert info.iterations == 11
 
     # check that failure to converge (even degree for abs) is signaled
     with pytest.raises((RuntimeError, np.linalg.LinAlgError)):
         baryrat.bpane(f, f_deriv, interval, 10, maxiter=100, verbose=0)
+
+def test_brane():
+    flamp.set_dps(100)
+    def f(x):       return abs(x)
+    def f_deriv(x): return np.sign(x)
+    interval = (-1.0, 1.0)
+
+    r, info = baryrat.brane(f, f_deriv, interval, (11, 10), info=True, verbose=0)
+    assert info.error < 2.7e-4 and abs(info.lam) < 2.7e-4
+    X = np.linspace(*interval, 100)
+    assert abs(f(X) - r(X)).max() < info.error * (1 + 1e-10)  # allow some tolerance
+    assert info.iterations == 15
+
+    # try with numerical derivative
+    r, info = baryrat.brane(f, None, interval, (11, 10), info=True, verbose=0)
+    assert info.error < 2.7e-4 and abs(info.lam) < 2.7e-4
+    assert info.iterations == 15
+
+    # check that failure to converge (even degree for abs) is signaled
+    with pytest.raises(RuntimeError):
+        baryrat.brane(f, f_deriv, interval, (10, 10), maxiter=10, verbose=0)

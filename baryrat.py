@@ -797,13 +797,19 @@ def local_maxima_sample(g, nodes, N):
     nn = np.arange(Z.shape[0])
     return Z[nn, maxk], vals[nn, maxk]
 
-def chebyshev_nodes(num_nodes, interval=(-1.0, 1.0)):
+def chebyshev_nodes(num_nodes, interval=(-1.0, 1.0), use_mp=False):
     """Compute `num_nodes` Chebyshev nodes of the first kind in the given interval."""
-    # compute nodes in (-1, 1)
-    nodes = (1 - np.cos((2*np.arange(1, num_nodes + 1) - 1) / (2*num_nodes) * np.pi))
-    # rescale to desired interval
-    a, b = interval
-    return nodes * ((b - a) / 2) + a
+    if use_mp:
+        nodes = (1 - flamp.cos((2*flamp.to_mp(np.arange(1, num_nodes + 1)) - 1) / (2*num_nodes) * gmpy2.const_pi()))
+        a, b = interval
+        a, b = gmpy2.mpfr(a), gmpy2.mpfr(b)
+        return nodes * ((b - a) / 2) + a
+    else:
+        # compute nodes in (-1, 1)
+        nodes = (1 - np.cos((2*np.arange(1, num_nodes + 1) - 1) / (2*num_nodes) * np.pi))
+        # rescale to desired interval
+        a, b = interval
+        return nodes * ((b - a) / 2) + a
 
 
 def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
@@ -1026,7 +1032,7 @@ def bpane(f, f_deriv, interval, deg, tol=1e-8, maxiter=1000, verbose=0, info=Fal
         info: whether to return an additional object with details
 
     Returns:
-        BarycentricRational: the computed rational approximation. If `info` is
+        BarycentricRational: the computed polynomial approximation. If `info` is
         True, instead returns a pair containing the approximation and an
         object with additional information (see below).
 
@@ -1102,7 +1108,212 @@ def bpane(f, f_deriv, interval, deg, tol=1e-8, maxiter=1000, verbose=0, info=Fal
                 from collections import namedtuple
                 Info = namedtuple('Info',
                         'error lam deviation nodes iterations')
-                return p, Info(abs(local_max).max(), lam, dev, x, it)
+                return p, Info(local_max.max(), lam, dev, x, it)
             else:
                 return p
+    raise RuntimeError(f'no convergence after {maxiter} iterations')
+
+
+### rational case
+
+def _interpolate_rat_with_jac(x, fx, f_deriv_x, deg):
+    """Return the rational interpolant as well as a function for computing the
+    Jacobian with respect to the interpolation nodes.
+    """
+    m, n = deg
+    nn = m + n + 1
+    assert x.shape[0] == nn, 'Wrong number of nodes'
+    N = max(m, n)
+    # compute primary and secondary nodes
+    idx_p = _pseudo_equi_nodes(nn, N + 1)
+    idx_s = np.setdiff1d(np.arange(nn), idx_p, assume_unique=True)
+    z, z_hat = x[idx_p], x[idx_s]
+    n_s, n_p = len(z_hat), len(z)     # n_p = N + 1
+
+    ######## Jacobian of w ########
+    ### Loewner matrix L
+    zhk, zl = z_hat[:, np.newaxis], z[np.newaxis, :]
+    fzhk, fzl = fx[idx_s, np.newaxis], fx[np.newaxis, idx_p]
+    f_deriv_zhk, f_deriv_zl = f_deriv_x[idx_s, np.newaxis], f_deriv_x[np.newaxis, idx_p]
+    L = (fzhk - fzl) / (zhk - zl)   # L has shape n_s x n_p
+
+    # derivatives of L with respect to z (column-wise)
+    L_deriv_col = (L - f_deriv_zl) / (zhk - zl)
+
+    # derivatives of L with respect to z_hat (row-wise)
+    L_deriv_row = (f_deriv_zhk - L) / (zhk - zl)
+
+    ### matrix A containing the degree constraints
+    LA = np.vstack((
+        L,
+        _defect_matrix(z, 0, N - n),
+        _defect_matrix(z, 0, N - m, fx[idx_p])
+    ))
+    # column-wise derivatives of upper part of A
+    if N == n:
+        A_deriv1 = flamp.zeros((0, n_p))
+    else:
+        A_deriv1 = np.vstack((
+            flamp.zeros((1, n_p)),
+            _defect_matrix(z, 0, N - n - 1) * np.arange(1, N - n)[:, None]
+        ))
+    # column-wise derivatives of lower part of A
+    if N == m:
+        A_deriv2 = flamp.zeros((0, n_p))
+    else:
+        A_deriv2 = np.vstack((
+            flamp.zeros((1, n_p)),
+            _defect_matrix(z, 0, N - m - 1) * np.arange(1, N - m)[:, None]
+        ))
+        A_deriv2 = _defect_matrix(z, 0, N - m, f_deriv_x[idx_p]) + fx[None, idx_p] * A_deriv2
+
+    A_deriv_col = np.vstack((A_deriv1, A_deriv2))
+
+    # compute QR of LA.T with high precision
+    Q, R = flamp.qr(LA.T)
+    R = R[:N, :N]       # keep only square triangular part (drop zeros)
+    w = Q[:, -1]        # weight vector in nullspace
+    B = -Q[:, :N] @ flamp.L_solve(R.T, flamp.eye(N))
+
+    # compute Jacobian of null vector w with respect to each x_j
+    w_jac = flamp.zeros((N + 1, nn))
+
+    # compute derivative of the nullspace of LA in direction L_dot
+    for j in range(n_p):
+        LA_dot = flamp.zeros(LA.shape)
+        LA_dot[:n_s, j] = L_deriv_col[:, j]
+        LA_dot[n_s:, j] = A_deriv_col[:, j]
+        w_dot = B @ (LA_dot @ w)
+        w_jac[:, idx_p[j]] = w_dot
+
+    for j in range(n_s):
+        LA_dot = flamp.zeros(LA.shape)
+        LA_dot[j, :] = L_deriv_row[j, :]
+        w_dot = B @ (LA_dot @ w)
+        w_jac[:, idx_s[j]] = w_dot
+
+    ###############################
+
+    z_jac = flamp.zeros((n_p, nn))
+    ftilde_jac = flamp.zeros((n_p, nn))
+
+    for j in range(n_p):
+        k = idx_p[j]
+        z_jac[j, k] = gmpy2.mpfr(1)
+        ftilde_jac[j, k] = f_deriv_x[k]
+
+    r = BarycentricRational(z, fx[idx_p], w)
+
+    def compute_jac(xi):
+        dr_z, dr_f, dr_w = r.jacobians(xi)
+        # chain rule
+        r_jac = dr_z @ z_jac + dr_f @ ftilde_jac + dr_w @ w_jac
+        return r_jac
+
+    return r, compute_jac
+
+def brane(f, f_deriv, interval, deg, tol=1e-16, maxiter=1000, initial_nodes=None, verbose=0, info=False):
+    """Best rational approximation using Newton's algorithm.
+
+    Compute the best uniform rational approximation of the function `f` with
+    derivative `f_deriv` in the given `interval`.
+
+    References:
+        https://www.ricam.oeaw.ac.at/files/reports/22/rep22-02.pdf
+
+    Arguments:
+        f: the scalar function to be approximated. Must be able to operate
+            on arrays of arguments.
+        f_deriv: the derivative of `f`. If `None` is passed, a central
+            finite difference quotient is used to approximate the derivative.
+        interval: the bounds `(a, b)` of the approximation interval
+        deg: the degree `(m, n)` of the approximating rational function
+        tol: the maximum allowed deviation from equioscillation
+        maxiter: the maximum number of iterations
+        initial_nodes: an array of length `m + n + 1` with the starting
+            interpolation nodes.  If not given, Chebyshev nodes of the first
+            kind are used.
+        verbose: if greater than 0, the progress is printed in each iteration
+        info: whether to return an additional object with details
+
+    Returns:
+        BarycentricRational: the computed rational approximation. If `info` is
+        True, instead returns a pair containing the approximation and an
+        object with additional information (see below).
+
+    The `info` object returned along with the approximation if `info=True` has
+    the following members:
+
+    * **error** (float): the maximum error of the approximation
+    * **lam** (float): the quantity lambda (signed error)
+    * **deviation** (float): the relative error between the smallest and the largest
+      equioscillation peak. The convergence criterion is **deviation** <= **tol**.
+    * **nodes** (array): the abscissae of the interpolation nodes (`m + n + 1`)
+    * **iterations** (int): the number of iterations used
+
+    Note:
+        This function requires the ``gmpy2`` and ``flamp`` packages for
+        extended precision.  Remember to set the precision by
+        ``flamp.set_dps(...)`` before use.
+    """
+    m, n = deg
+    nn = m + n + 1
+    a, b = interval
+    if initial_nodes is not None:
+        if len(initial_nodes) != nn:
+            raise ValueError('initial nodes have wrong length, should be ' + str(nn))
+        x = flamp.to_mp(initial_nodes)
+    else:
+        x = chebyshev_nodes(nn, interval, use_mp=True)
+    w = (-1)**np.arange(nn + 1)
+    lam = None
+
+    for num_iter in range(maxiter):
+        if f_deriv:
+            derivs = f_deriv(x)
+        else:
+            # use finite differences
+            delta = (b - a) * 1e-6
+            derivs = (f(x + delta) - f(x - delta)) / (2 * delta)
+        r, compute_jac = _interpolate_rat_with_jac(x, f(x), derivs, deg)
+
+        def errfun(X): return abs(f(X) - r(X))
+        all_nodes = np.concatenate(([gmpy2.mpfr(a)], x, [gmpy2.mpfr(b)]))
+        local_max_x, local_max = local_maxima_golden(errfun, all_nodes, num_iter=30)
+        if lam is None:     # in first iteration, make a guess for lambda
+            lam = np.mean((f(local_max_x) - r(local_max_x)) / w)
+
+        xx = np.concatenate((x, [lam]))
+        rhs = f(local_max_x) - r(local_max_x) - lam*w
+
+        dev = local_max.max() / local_max.min() - 1
+        if dev < tol:
+            if verbose > 0:
+                print('%d iterations, dev = %e, error = %e' % (num_iter, dev, lam))
+            if info:
+                from collections import namedtuple
+                Info = namedtuple('Info',
+                        'error lam deviation nodes iterations')
+                return r, Info(local_max.max(), lam, dev, x, num_iter)
+            else:
+                return r
+
+        # direction for the Newton step
+        Jac = -np.hstack((compute_jac(local_max_x), w[:, np.newaxis]))
+        # solve the system for the Newton step using extended precision
+        dxl = flamp.lu_solve(Jac, -rhs)
+
+        # find admissible step size tau
+        tau = gmpy2.mpfr(1)
+        while True:
+            x_new = x + tau * dxl[:-1]
+            lam_new = lam + tau * dxl[-1]
+            if all(a < x_new) and all(x_new < b) and all(np.diff(x_new) > 0):
+                break
+            else:
+                tau = tau / 2
+        x, lam = x_new, lam_new
+        if verbose > 0:
+            res_norm = flamp.vector_norm(rhs)
+            print('%e %e %e %e' % (tau, res_norm, lam, local_max.max()))
     raise RuntimeError(f'no convergence after {maxiter} iterations')
