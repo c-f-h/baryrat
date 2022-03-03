@@ -379,7 +379,15 @@ def test_bpane():
     def f(x):       return abs(x)
     def f_deriv(x): return np.sign(x)
     interval = (-1.0, 1.0)
+
     p, info = baryrat.bpane(f, f_deriv, interval, 11, info=True, verbose=0)
+    assert info.error < 2.8e-2 and abs(info.lam) < 2.8e-2
+    X = np.linspace(*interval, 100)
+    assert np.abs(f(X) - p(X)).max() < info.error * (1 + 1e-6)  # allow some tolerance
+    assert info.iterations == 11
+
+    # try with numerical derivative
+    p, info = baryrat.bpane(f, None, interval, 11, info=True, verbose=0)
     assert info.error < 2.8e-2 and abs(info.lam) < 2.8e-2
     X = np.linspace(*interval, 100)
     assert np.abs(f(X) - p(X)).max() < info.error * (1 + 1e-6)  # allow some tolerance

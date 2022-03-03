@@ -1016,7 +1016,8 @@ def bpane(f, f_deriv, interval, deg, tol=1e-8, maxiter=1000, verbose=0, info=Fal
     Arguments:
         f: the scalar function to be approximated. Must be able to operate
             on arrays of arguments.
-        f_deriv: the derivative of `f`
+        f_deriv: the derivative of `f`. If `None` is passed, a central
+            finite difference quotient is used to approximate the derivative.
         interval: the bounds `(a, b)` of the approximation interval
         deg: the degree of the approximating polynomial
         tol: the maximum allowed deviation from equioscillation
@@ -1060,7 +1061,13 @@ def bpane(f, f_deriv, interval, deg, tol=1e-8, maxiter=1000, verbose=0, info=Fal
             lam = np.mean(equalized_errs)
 
         # compute the Jacobian of the nonlinear system of equations
-        Jac_p = -_p_gradient(x, f(x), f_deriv(x), local_max_x).T
+        if f_deriv:
+            derivs = f_deriv(x)
+        else:
+            # use finite differences
+            delta = (b - a) * 1e-6
+            derivs = (f(x + delta) - f(x - delta)) / (2 * delta)
+        Jac_p = -_p_gradient(x, f(x), derivs, local_max_x).T
         Jac = np.hstack((Jac_p, -w[:, None]))
 
         # compute the residual
