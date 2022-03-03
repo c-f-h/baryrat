@@ -973,3 +973,129 @@ def brasil(f, interval, deg, tol=1e-4, maxiter=1000, max_step_size=0.1,
             # rescale so that they add up to b-a again
             intv_lengths *= (b - a) / intv_lengths.sum()
             nodes = np.cumsum(intv_lengths)[:-1] + a
+
+
+################################################################################
+# Newton approximation algorithms
+################################################################################
+
+def _omega(x, X):
+    """Nodal polynomial with nodes `x` evaluated at `X`."""
+    return np.prod(X[:, None] - x[None, :], axis=-1)
+
+def _om_j(j, x, X):
+    """Nodal polynomial with nodes `x` without j-th term evaluated at `X`."""
+    X = np.atleast_1d(X)
+    indices = np.delete(np.arange(len(x)), j)
+    return np.prod(X[:, None] - x[None, indices], axis=-1)
+
+def _p_gradient(x, fx, f_deriv_x, X):
+    """Derivatives of interpolating polynomial through nodes `x` w.r.t. all interpolating nodes
+    evaluated at the abscissae `X`."""
+    n = len(x)
+    Q_diag = [
+          f_deriv_x[i] - fx[i] * sum(1 / (x[i] - x[k]) for k in range(n) if k != i)
+          for i in range(n)]
+    ww = [_om_j(i, x, x[i])[0] for i in range(n)]
+    Q_ij = [[ 0 if (i==j) else fx[j] * ww[i] / (ww[j] * (x[j] - x[i]))
+            for j in range(n) ]
+            for i in range(n) ]
+    Q = np.diag(Q_diag) + Q_ij
+    omg = _omega(x, X)
+    return np.array([Q[i].sum() * omg / ((X - x[i]) * ww[i]) for i in range(n)])
+
+def bpane(f, f_deriv, interval, deg, tol=1e-8, maxiter=1000, verbose=0, info=False):
+    """Best polynomial approximation using Newton's algorithm.
+
+    Compute the best uniform polynomial approximation of degree `deg` of the
+    function `f` with derivative `f_deriv` in the given `interval`.
+
+    References:
+        https://www.ricam.oeaw.ac.at/files/reports/21/rep21-46.pdf
+
+    Arguments:
+        f: the scalar function to be approximated. Must be able to operate
+            on arrays of arguments.
+        f_deriv: the derivative of `f`
+        interval: the bounds `(a, b)` of the approximation interval
+        deg: the degree of the approximating polynomial
+        tol: the maximum allowed deviation from equioscillation
+        maxiter: the maximum number of iterations
+        verbose: if greater than 0, the progress is printed in each iteration
+        info: whether to return an additional object with details
+
+    Returns:
+        BarycentricRational: the computed rational approximation. If `info` is
+        True, instead returns a pair containing the approximation and an
+        object with additional information (see below).
+
+    The `info` object returned along with the approximation if `info=True` has
+    the following members:
+
+    * **error** (float): the maximum error of the approximation
+    * **lam** (float): the quantity lambda (signed error)
+    * **deviation** (float): the relative error between the smallest and the largest
+      equioscillation peak. The convergence criterion is **deviation** <= **tol**.
+    * **nodes** (array): the abscissae of the interpolation nodes (`deg` + 1)
+    * **iterations** (int): the number of iterations used
+    """
+    a, b = interval
+    nn = deg + 1
+    # start with Chebyshev nodes
+    x = (1 - np.cos((2*np.arange(1, nn + 1) - 1) / (2*nn) * np.pi)) / 2 * (b - a) + a
+    w = (-1)**np.arange(nn + 1)
+
+    lam = None
+    def errfun(X): return abs(f(X) - p(X))
+
+    for it in range(maxiter):
+        # interpolate at current nodes x
+        p = interpolate_poly(x, f(x))
+        # determine the local error maxima
+        all_nodes = np.concatenate(([a], x, [b]))
+        local_max_x, local_max = local_maxima_golden(errfun, all_nodes, num_iter=30)
+        signed_errs = f(local_max_x) - p(local_max_x)
+        equalized_errs = signed_errs / w
+        if lam is None:     # in first iteration, make a guess for lambda
+            lam = np.mean(equalized_errs)
+
+        # compute the Jacobian of the nonlinear system of equations
+        Jac_p = -_p_gradient(x, f(x), f_deriv(x), local_max_x).T
+        Jac = np.hstack((Jac_p, -w[:, None]))
+
+        # compute the residual
+        xx = np.concatenate((x, [lam]))
+        rhs = f(local_max_x) - p(local_max_x) - lam * w
+
+        # direction for the Newton step
+        dxl = -np.linalg.solve(Jac, rhs)
+        if any(np.isnan(dxl)):
+            raise RuntimeError('breakdown in computing Newton step')
+
+        # determine permissible step size tau
+        tau = 1.0
+        while True:
+            x_new = x + tau * dxl[:-1]
+            lam_new = lam + tau * dxl[-1]
+            if all(a < x_new) and all(x_new < b) and all(np.diff(x_new) > 0):
+                break
+            else:
+                tau *= 0.5
+        x, lam = x_new, lam_new
+
+        # check if the error have correct signs
+        equal_signs = (all(equalized_errs >= 0) or all(equalized_errs <= 0))
+        # deviation from equioscillation
+        dev = local_max.max() / local_max.min() - 1
+        if verbose > 0:
+            print(f'  tau={tau:8.2g}   res={np.linalg.norm(rhs):8.2g}    dev={dev:8.2g}    lambda={lam:8.2g}')
+
+        if equal_signs and dev < tol:
+            if info:
+                from collections import namedtuple
+                Info = namedtuple('Info',
+                        'error lam deviation nodes iterations')
+                return p, Info(abs(local_max).max(), lam, dev, x, it)
+            else:
+                return p
+    raise RuntimeError(f'no convergence after {maxiter} iterations')
