@@ -1315,5 +1315,5 @@ def brane(f, f_deriv, interval, deg, tol=1e-16, maxiter=1000, initial_nodes=None
         x, lam = x_new, lam_new
         if verbose > 0:
             res_norm = flamp.vector_norm(rhs)
-            print('%e %e %e %e' % (tau, res_norm, lam, local_max.max()))
+            print(f'  tau = {tau:8.2g}   res = {res_norm:8.2g}    dev = {dev:8.2g}    lambda = {lam:8.2g}')
     raise RuntimeError(f'no convergence after {maxiter} iterations')
