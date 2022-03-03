@@ -1101,7 +1101,7 @@ def bpane(f, f_deriv, interval, deg, tol=1e-8, maxiter=1000, verbose=0, info=Fal
         # deviation from equioscillation
         dev = local_max.max() / local_max.min() - 1
         if verbose > 0:
-            print(f'  tau={tau:8.2g}   res={np.linalg.norm(rhs):8.2g}    dev={dev:8.2g}    lambda={lam:8.2g}')
+            print(f'  tau = {tau:8.2g}   res = {np.linalg.norm(rhs):8.2g}    dev = {dev:8.2g}    lambda = {lam:8.2g}')
 
         if equal_signs and dev < tol:
             if info:
