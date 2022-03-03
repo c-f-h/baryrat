@@ -1043,7 +1043,7 @@ def bpane(f, f_deriv, interval, deg, tol=1e-8, maxiter=1000, verbose=0, info=Fal
     a, b = interval
     nn = deg + 1
     # start with Chebyshev nodes
-    x = (1 - np.cos((2*np.arange(1, nn + 1) - 1) / (2*nn) * np.pi)) / 2 * (b - a) + a
+    x = chebyshev_nodes(nn, (a, b))
     w = (-1)**np.arange(nn + 1)
 
     lam = None
