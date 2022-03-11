@@ -91,18 +91,15 @@ def _nullspace_vector(A, use_mp=False):
     if _is_mp_array(A):
         use_mp = True
 
-    if A.shape[0] == 0:
-        # some LAPACK implementations have trouble with size 0 matrices
-        result = np.zeros(A.shape[1])
-        result[0] = 1.0
-        if use_mp:
-            assert flamp, 'flamp package is not installed'
-            result = flamp.to_mp(result)
-        return result
-
     if use_mp:
         Q, _ = _mp_qr(A.T)
     else:
+        if A.shape[0] == 0:
+            # some LAPACK implementations have trouble with size 0 matrices
+            result = np.zeros(A.shape[1])
+            result[0] = 1.0
+            return result
+
         Q, _ = scipy.linalg.qr(A.T, mode='full')
     return Q[:, -1].conj()
 
