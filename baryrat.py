@@ -1010,6 +1010,16 @@ def _p_gradient(x, fx, f_deriv_x, X):
     omg = _omega(x, X)
     return np.array([Q[i].sum() * omg / ((X - x[i]) * ww[i]) for i in range(n)])
 
+def _finite_diff(all_nodes, f, eps=1e-8):
+    # use finite differences to approximate first derivatives in the interior nodes
+    intv_lengths = np.diff(all_nodes)
+    delta = eps * np.minimum(intv_lengths[:-1], intv_lengths[1:])  # smaller of the two neighboring intervals
+    a, b = all_nodes[0], all_nodes[-1]
+    x = all_nodes[1:-1]         # skip beginning and end (a,b) of interval
+    xplus  = np.minimum(x + delta, b)
+    xminus = np.maximum(x - delta, a)
+    return (f(xplus) - f(xminus)) / (xplus - xminus)
+
 def bpane(f, f_deriv, interval, deg, tol=1e-8, maxiter=1000, verbose=0, info=False):
     """Best polynomial approximation using Newton's algorithm.
 
@@ -1070,9 +1080,7 @@ def bpane(f, f_deriv, interval, deg, tol=1e-8, maxiter=1000, verbose=0, info=Fal
         if f_deriv:
             derivs = f_deriv(x)
         else:
-            # use finite differences
-            delta = (b - a) * 1e-6
-            derivs = (f(x + delta) - f(x - delta)) / (2 * delta)
+            derivs = _finite_diff(all_nodes, f, eps=1e-8)
         Jac_p = -_p_gradient(x, f(x), derivs, local_max_x).T
         Jac = np.hstack((Jac_p, -w[:, None]))
 
@@ -1269,16 +1277,14 @@ def brane(f, f_deriv, interval, deg, tol=1e-16, maxiter=1000, initial_nodes=None
     lam = None
 
     for num_iter in range(maxiter):
+        all_nodes = np.concatenate(([gmpy2.mpfr(a)], x, [gmpy2.mpfr(b)]))
         if f_deriv:
             derivs = f_deriv(x)
         else:
-            # use finite differences
-            delta = (b - a) * 1e-6
-            derivs = (f(x + delta) - f(x - delta)) / (2 * delta)
+            derivs = _finite_diff(all_nodes, f, eps=1e-8)
         r, compute_jac = _interpolate_rat_with_jac(x, f(x), derivs, deg)
 
         def errfun(X): return abs(f(X) - r(X))
-        all_nodes = np.concatenate(([gmpy2.mpfr(a)], x, [gmpy2.mpfr(b)]))
         local_max_x, local_max = local_maxima_golden(errfun, all_nodes, num_iter=30)
         if lam is None:     # in first iteration, make a guess for lambda
             lam = np.mean((f(local_max_x) - r(local_max_x)) / w)
