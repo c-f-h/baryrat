@@ -304,7 +304,7 @@ class BarycentricRational:
         return np.sum(self.values * self.weights) / np.sum(self.weights)
 
     def reciprocal(self):
-        """Return a new `BarycentricRational` which is the reciprocal of this one."""
+        """Return a new :class:`BarycentricRational` which is the reciprocal of this one."""
         return BarycentricRational(
                 self.nodes.copy(),
                 1 / self.values,
@@ -583,6 +583,13 @@ def _polynomial_weights(x):
 def interpolate_poly(nodes, values):
     """Compute the interpolating polynomial for the given nodes and values in
     barycentric form.
+
+    Args:
+        nodes (array): the interpolation nodes
+        values (array): the function values at the interpolation nodes
+
+    Returns:
+        BarycentricRational: the polynomial interpolant
     """
     n = len(nodes)
     if n != len(values):
@@ -594,8 +601,14 @@ def interpolate_with_poles(nodes, values, poles, use_mp=False):
     """Compute a rational function which interpolates the given values at the
     given nodes and which has the given poles.
 
-    The arrays ``nodes`` and ``values`` should have length `n`, and
-    ``poles`` should have length `n - 1`.
+    Args:
+        nodes (array): the interpolation nodes (length `n`)
+        values (array): the function values at the interpolation nodes (length `n`)
+        poles (array): the locations of the poles of the rational function (length `n-1`)
+        use_mp (bool): whether to use ``gmpy2`` for extended precision
+
+    Returns:
+        BarycentricRational: the rational interpolant with the given poles
     """
     # ref: (Knockaert 2008), doi:10.1109/LSP.2007.913583
     n = len(nodes)
@@ -612,14 +625,21 @@ def interpolate_with_poles(nodes, values, poles, use_mp=False):
 
 def floater_hormann(nodes, values, blending):
     """Compute the Floater-Hormann rational interpolant for the given nodes and
-    values. See (Floater, Hormann 2007), DOI 10.1007/s00211-007-0093-y.
+    values.
 
-    The blending parameter (usually called `d` in the literature) is an integer
-    between 0 and n (inclusive), where n+1 is the number of interpolation
-    nodes. For functions with higher smoothness, the blending parameter may be
-    chosen higher. For d=n, the result is the polynomial interpolant.
+    Args:
+        nodes (array): the interpolation nodes (length `n`)
+        values (array): the function values at the interpolation nodes (length `n`)
+        blending (int): the blending parameter (usually called `d` in the literature),
+            an integer between 0 and `n-1` (inclusive).  For functions with
+            higher smoothness, the blending parameter may be chosen higher. For
+            `d=n-1`, the result is the polynomial interpolant.
 
-    Returns an instance of `BarycentricRational`.
+    Returns:
+        BarycentricRational: the rational interpolant
+
+    References:
+        (Floater, Hormann 2007): https://doi.org/10.1007/s00211-007-0093-y
     """
     n = len(values) - 1
     if n != len(nodes) - 1:
