@@ -438,7 +438,7 @@ def aaa(Z, F, tol=1e-13, mmax=100, return_errors=False):
         A = (F[J,None] - fj[None,:]) * C
 
         # compute weights as right singular vector for smallest singular value
-        _, _, Vh = np.linalg.svd(A)
+        _, _, Vh = np.linalg.svd(A, full_matrices=False)
         wj = Vh[-1, :].conj()
 
         # approximation: numerator / denominator
