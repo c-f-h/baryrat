@@ -14,7 +14,7 @@ except ImportError:
 else:
     from gmpy2 import mpfr, mpc
 
-__version__ = '2.1.1'
+__version__ = '2.1.2'
 
 def _is_mp_array(x):
     """Checks whether `x` is an ndarray containing gmpy2 extended precision numbers."""
