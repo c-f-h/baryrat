@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "baryrat"
+authors = [
+  { name="Clemens Hofreither", email="chofreither@gmail.com" },
+]
+description = "A Python package for barycentric rational approximation"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+license = "BSD-2-Clause"
+license-files = ["LICENSE"]
+dynamic = ["version"]
+dependencies = [
+    "numpy>=1.11",
+    "scipy",
+]
+
+[project.urls]
+Homepage = "https://github.com/c-f-h/baryrat"
+Issues = "https://github.com/c-f-h/baryrat/issues"
+
+[tool.hatch.version]
+path = "baryrat.py"
