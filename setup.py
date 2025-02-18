@@ -11,7 +11,7 @@ def readme():
 
 setup(
     name = 'baryrat',
-    version = '2.1.0',
+    version = '2.1.1',
     description = 'A Python package for barycentric rational approximation',
     long_description = readme(),
     long_description_content_type = 'text/markdown',
