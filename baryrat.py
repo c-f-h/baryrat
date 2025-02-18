@@ -438,7 +438,12 @@ def aaa(Z, F, tol=1e-13, mmax=100, return_errors=False):
         A = (F[J,None] - fj[None,:]) * C
 
         # compute weights as right singular vector for smallest singular value
-        _, _, Vh = np.linalg.svd(A, full_matrices=False)
+        # NB: if A (m x n) has already gotten wider than tall (n > m; many iterations compared to data points),
+        # then we do require the full n x n matrix for Vh so that we get a vector in the nullspace of A.
+        # Otherwise it's sufficient to use full_matrices=False, which is much more efficient if m >> n.
+        # (With full_matrices=True, the full m x m matrix U would be computed, which we don't need.)
+        full_matrices = (A.shape[1] > A.shape[0])
+        _, _, Vh = np.linalg.svd(A, full_matrices=full_matrices)
         wj = Vh[-1, :].conj()
 
         # approximation: numerator / denominator
