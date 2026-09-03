@@ -103,6 +103,45 @@ def _nullspace_vector(A, use_mp=False):
         Q, _ = scipy.linalg.qr(A.T, mode='full')
     return Q[:, -1].conj()
 
+def _poly_bary_to_power_double(bary_poly, deg):
+    """Convert a polynomial in barycentric form to power-basis coefficients.
+
+    Returns an array ``[c0, ..., cdeg]`` with ``p(x) = c0 + c1*x + ...``.
+    Sampling at roots of unity makes the Vandermonde system a (perfectly
+    conditioned) Fourier matrix.
+    """
+    if deg == 0:
+        v = np.asanyarray(bary_poly(0.0)).ravel()[0]
+        return np.real_if_close(np.array([v]))
+    nn = deg + 1
+    omega = np.exp(2j * np.pi / nn)
+    xs = omega ** np.arange(nn)
+    v = np.asanyarray(bary_poly(xs)).ravel()
+    V = np.vander(xs, nn, increasing=True)
+    coeffs = np.linalg.solve(V, v)
+    return np.real_if_close(coeffs, tol=1000)
+
+def _poly_bary_to_power_mp(bary_poly, deg):
+    """Extended-precision variant of :func:`_poly_bary_to_power_double`.
+
+    Samples at (real) Chebyshev nodes in ``[-1, 1]`` and solves the
+    Vandermonde system with ``flamp``.
+    """
+    assert flamp, 'flamp package is not installed'
+    if deg == 0:
+        v = np.asanyarray(bary_poly(np.array([mpfr(0)]))).ravel()
+        return v
+    nn = deg + 1
+    k = flamp.to_mp(np.arange(1, nn + 1))
+    theta = (2 * k - 1) / (2 * nn) * gmpy2.const_pi()
+    xs = flamp.cos(theta)
+    v = np.asanyarray(bary_poly(xs)).ravel()
+    V = flamp.zeros((nn, nn))
+    for i in range(nn):
+        for j in range(nn):
+            V[i, j] = xs[i] ** j
+    return np.asanyarray(flamp.lu_solve(V, v))
+
 class BarycentricRational:
     """A class representing a rational function in barycentric representation.
 
@@ -345,6 +384,59 @@ class BarycentricRational:
     def degree(self, tol=1e-12):
         """Compute the pair `(m,n)` of true degrees of the numerator and denominator."""
         return (self.degree_numer(tol=tol), self.degree_denom(tol=tol))
+
+    def power_basis(self, tol=1e-12):
+        """Return the power-basis (monomial) coefficients of the numerator and
+        denominator polynomials.
+
+        Returns:
+            A pair ``(num, den)`` of coefficient lists in increasing order,
+            i.e. ``num[k]`` is the coefficient of ``x**k``, such that
+            ``r(x) == sum(num[k]*x**k) / sum(den[k]*x**k)``.
+
+        The degrees `(m, n)` are the true degrees from :meth:`degree`, so
+        ``len(num) == m + 1`` and ``len(den) == n + 1``. The pair is unique
+        up to a common nonzero factor; it is normalized here so that the
+        denominator is monic (its leading coefficient is 1), or ``den == [1]``
+        if the denominator has degree 0.
+
+        Args:
+            tol: tolerance passed to :meth:`degree` for determining the true
+                degrees.
+
+        Example:
+            >>> import numpy as np, baryrat
+            >>> r = baryrat.brasil(lambda x: np.sin(x)*np.exp(x), [0, np.pi], 2)
+            >>> num, den = r.power_basis()
+            >>> X = np.linspace(0, np.pi, 200)
+            >>> abs(r(X) - np.polyval(num[::-1], X)/np.polyval(den[::-1], X)).max() < 1e-12
+            True
+
+        Note:
+            The monomial basis is ill-conditioned for high degrees; prefer
+            the barycentric form, :meth:`poles`/:meth:`zeros`, or
+            :meth:`polres` for computation and use this only for export.
+            Extended precision (``gmpy2``/``flamp``) is used automatically if
+            the rational function :meth:`uses_mp`.
+        """
+        m, n = self.degree(tol=tol)
+        num_bary = self.numerator()
+        den_bary = self.denominator()
+        if self.uses_mp():
+            num = _poly_bary_to_power_mp(num_bary, m)
+            den = _poly_bary_to_power_mp(den_bary, n)
+        else:
+            num = _poly_bary_to_power_double(num_bary, m)
+            den = _poly_bary_to_power_double(den_bary, n)
+        scale = den[-1] if n > 0 else den[0]
+        if scale == 0:
+            raise ValueError('degenerate denominator with zero leading coefficient')
+        num = num / scale
+        den = den / scale
+        if not self.uses_mp():
+            num = np.real_if_close(num, tol=1000)
+            den = np.real_if_close(den, tol=1000)
+        return num.tolist(), den.tolist()
 
     def reduce_order(self):
         """Return a new :class:`BarycentricRational` which represents the same rational

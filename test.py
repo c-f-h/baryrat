@@ -415,3 +415,35 @@ def test_brane():
     # check that failure to converge (even degree for abs) is signaled
     with pytest.raises(RuntimeError):
         baryrat.brane(f, f_deriv, interval, (10, 10), maxiter=10, verbose=0)
+
+def test_power_basis():
+    # exact rational (x+3)/((x+1)*(x+2)) == (3 + x)/(2 + 3*x + x**2)
+    def f(x):
+        return (x + 3) / ((x + 1) * (x + 2))
+    Z = np.linspace(0, 1, 4)
+    r = baryrat.interpolate_with_degree(Z, f(Z), (1, 2))
+    num, den = r.power_basis()
+    assert isinstance(num, list) and isinstance(den, list)
+    assert np.allclose(num, [3, 1])
+    assert np.allclose(den, [2, 3, 1])
+    # BRASIL approximant: ratio of power-basis polynomials reproduces r
+    r2 = baryrat.brasil(lambda x: np.sin(x) * np.exp(x), [0, np.pi], 2)
+    num2, den2 = r2.power_basis()
+    assert den2[-1] == 1.0     # monic denominator
+    X2 = np.linspace(0, np.pi, 200)
+    assert np.allclose(
+        np.polyval(num2[::-1], X2) / np.polyval(den2[::-1], X2), r2(X2))
+    # polynomial case: denominator is [1]
+    Z3 = np.linspace(1, 5, 7)
+    p = baryrat.interpolate_poly(Z3, np.sin(Z3))
+    nump, denp = p.power_basis()
+    assert denp == [1.0]
+    assert np.allclose(np.polyval(nump[::-1], Z3), np.sin(Z3))
+    # extended precision
+    flamp.set_dps(50)
+    Zm = flamp.linspace(0, 1, 5)
+    rm = baryrat.interpolate_rat(Zm, f(Zm))
+    numm, denm = rm.power_basis()
+    assert abs(numm[0] / numm[1] - 3) < 1e-40
+    assert abs(denm[0] / denm[2] - 2) < 1e-40
+    assert abs(denm[1] / denm[2] - 3) < 1e-40
